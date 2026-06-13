@@ -1,0 +1,30 @@
+{
+    admin localhost:2019
+    auto_https off
+}
+
+foto.dreyjey.ddnss.de {
+    tls internal
+
+    root * /var/www/html/public
+
+    php_fastcgi lichtmoment-app:9000 {
+        env SCRIPT_FILENAME /var/www/html/public/index.php
+    }
+
+    handle_path /storage/* {
+        file_server {
+            root /var/www/html/public/storage
+        }
+    }
+
+    file_server
+
+    log {
+        output file /data/caddy/access.log
+    }
+}
+
+http://foto.dreyjey.ddnss.de {
+    redir https://foto.dreyjey.ddnss.de{uri} permanent
+}

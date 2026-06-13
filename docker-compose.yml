@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php.Dockerfile
+    container_name: lichtmoment-app
+    restart: unless-stopped
+    volumes:
+      - lichtmoment_storage:/var/www/html/storage
+      - lichtmoment_uploads:/var/www/html/public/storage
+      - lichtmoment_db:/var/www/html/database
+    networks:
+      - compose_default
+    environment:
+      - APP_DEBUG=false
+      - APP_URL=https://foto.dreyjey.ddnss.de
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/html/database/database.sqlite
+    expose:
+      - "9000"
+
+volumes:
+  lichtmoment_storage:
+  lichtmoment_uploads:
+  lichtmoment_db:
+
+networks:
+  compose_default:
+    external: true
