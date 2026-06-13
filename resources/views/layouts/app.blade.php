@@ -8,6 +8,11 @@
 
     @vite(["resources/css/app.css", "resources/js/app.js"])
 
+    {{-- Admin Design System --}}
+    @if (isset($adminNav) && $adminNav)
+        @include('admin.partials.design-system')
+    @endif
+
     @stack('head')
 </head>
 <body class="bg-offwhite text-gray-800 font-sans antialiased min-h-screen flex flex-col">
@@ -17,9 +22,15 @@
     <nav class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             <a href="{{ route('admin.dashboard') }}" class="font-serif text-lg sm:text-xl text-gold-400 tracking-wide shrink-0">Lichtmoment</a>
-            <div class="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm">
-                <a href="{{ route('admin.dashboard') }}" class="text-gray-500 hover:text-gold-400 transition-colors">Dashboard</a>
-                <a href="{{ route('admin.logout') }}" class="text-gray-400 hover:text-red-500 transition-colors">Abmelden</a>
+            <div class="flex items-center gap-2 sm:gap-3">
+                <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm rounded-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    <span class="hidden sm:inline">Dashboard</span>
+                </a>
+                <a href="{{ route('admin.logout') }}" class="btn btn-ghost btn-sm rounded-lg !text-red-400 hover:!text-red-600 hover:!bg-red-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span class="hidden sm:inline">Abmelden</span>
+                </a>
             </div>
         </div>
     </nav>
