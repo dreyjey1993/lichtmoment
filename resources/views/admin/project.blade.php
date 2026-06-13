@@ -428,6 +428,13 @@ try {
         lb.classList.remove('hidden');
         lb.classList.add('flex');
         document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        // Push history state so browser back closes lightbox instead of navigating away
+        if (!window.__lbHistoryPushed) {
+            window.__lbHistoryPushed = true;
+            history.pushState({ lightbox: true }, '');
+        }
     }
 
     function closeAdminLightbox() {
@@ -435,7 +442,22 @@ try {
         lb.classList.add('hidden');
         lb.classList.remove('flex');
         document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        // Pop the history state we pushed
+        if (window.__lbHistoryPushed) {
+            window.__lbHistoryPushed = false;
+            history.back();
+        }
     }
+
+    // Handle browser back button while lightbox is open
+    window.addEventListener('popstate', function(e) {
+        const lb = document.getElementById('admin-lightbox');
+        if (lb && !lb.classList.contains('hidden')) {
+            closeAdminLightbox();
+        }
+    });
 
     function adminLbPrev() {
         adminLightboxIndex = (adminLightboxIndex - 1 + ADMIN_PHOTOS.length) % ADMIN_PHOTOS.length;
