@@ -7,6 +7,7 @@
 @section('content')
 <div class="pt-24 sm:pt-28 pb-8 sm:pb-12 px-4 sm:px-6">
     <div class="max-w-6xl mx-auto">
+
         {{-- Header --}}
         <div class="mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
@@ -14,7 +15,8 @@
                 <h1 class="font-serif text-2xl sm:text-3xl text-gray-700">{{ $project->name }}</h1>
                 @if($project->description)<p class="text-gray-400 mt-1 text-sm">{{ $project->description }}</p>@endif
             </div>
-            <button onclick="deleteProject({{ $project->id }}, '{{ addslashes($project->name) }}')" class="px-4 py-2 text-sm text-red-500 border border-red-200 hover:bg-red-50 rounded-lg transition-colors shrink-0 self-start">
+            <button onclick="deleteProject({{ $project->id }}, '{{ addslashes($project->name) }}')" class="inline-flex items-center gap-2 px-4 py-2 text-sm text-red-500 border border-red-200 hover:bg-red-50 rounded-lg transition-colors shrink-0 self-start">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 Projekt löschen
             </button>
         </div>
@@ -43,19 +45,27 @@
         {{-- Two Column Grid --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {{-- Left: Folders + Photos --}}
-            <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-6">
+            <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
+
+                {{-- Header with bulk actions --}}
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="font-medium text-gray-700">Ordner & Fotos</h2>
-                    <div class="flex items-center gap-2">
-                        @if($photos->count() > 0)
-                        <button onclick="selectAllPhotos()" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Alle auswählen</button>
-                        <button onclick="deleteAllPhotos()" class="text-xs text-red-400 hover:text-red-600 transition-colors">Alle löschen</button>
-                        @endif
+                    @if($photos->count() > 0)
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleSelectMode()" id="select-mode-btn" class="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Auswahl
+                        </button>
+                        <button onclick="deleteAllPhotos()" class="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-600 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            Alle löschen
+                        </button>
                     </div>
+                    @endif
                 </div>
 
                 {{-- New Folder --}}
-                <div class="flex flex-wrap gap-2 mb-6">
+                <div class="flex flex-wrap gap-2 mb-5">
                     <input type="text" id="new-folder-name" placeholder="Neuer Ordner..." class="flex-1 min-w-[120px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-gold-400 outline-none">
                     <select id="new-folder-parent" class="flex-1 min-w-[100px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-gold-400 outline-none">
                         <option value="">Ohne Elternordner</option>
@@ -66,30 +76,48 @@
                     <button onclick="createFolder()" class="px-4 py-2 bg-gold-400 hover:bg-gold-500 text-white text-sm rounded-lg transition-colors shrink-0">+</button>
                 </div>
 
-                {{-- Folder Tabs with delete --}}
+                {{-- Folder Tabs --}}
                 @if($folders->count() > 0)
                 <div class="flex flex-wrap gap-2 mb-4">
-                    <button onclick="filterPhotosByFolder(null)" class="folder-tab text-xs px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gold-400 transition-colors {{ !request('folder') ? 'bg-gold-50 border-gold-400 text-gold-600' : '' }}" data-folder="">Alle Fotos</button>
+                    <button onclick="filterPhotosByFolder(null)" class="folder-tab inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors {{ !request('folder') ? 'bg-gold-50 border-gold-400 text-gold-600' : 'border-gray-200 hover:border-gold-400' }}" data-folder="">
+                        Alle Fotos
+                        <span class="text-[10px] opacity-60">({{ $photos->count() }})</span>
+                    </button>
                     @foreach($folders as $folder)
-                    <div class="folder-tab-wrapper flex items-center gap-1">
-                        <button onclick="filterPhotosByFolder({{ $folder->id }})" class="folder-tab text-xs px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gold-400 transition-colors {{ request('folder') == $folder->id ? 'bg-gold-50 border-gold-400 text-gold-600' : '' }}" data-folder="{{ $folder->id }}">{{ $folder->name }}</button>
-                        <button onclick="deleteFolder({{ $folder->id }}, '{{ addslashes($folder->name) }}')" class="w-5 h-5 text-red-400 hover:text-red-600 text-xs leading-none" title="Ordner löschen">&times;</button>
+                    <div class="folder-tab-wrapper inline-flex items-center">
+                        <button onclick="filterPhotosByFolder({{ $folder->id }})" class="folder-tab inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-l-lg border border-r-0 transition-colors {{ request('folder') == $folder->id ? 'bg-gold-50 border-gold-400 text-gold-600' : 'border-gray-200 hover:border-gold-400' }}" data-folder="{{ $folder->id }}">
+                            {{ $folder->name }}
+                            <span class="text-[10px] opacity-60">({{ $photos->where('folder_id', $folder->id)->count() }})</span>
+                        </button>
+                        <button onclick="deleteFolder({{ $folder->id }}, '{{ addslashes($folder->name) }}')" class="w-7 h-7 flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 border border-l-0 border-gray-200 rounded-r-lg transition-colors" title="Ordner löschen">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     </div>
                     @endforeach
                 </div>
-                @endif>
+                @endif
 
                 {{-- Bulk Delete Bar --}}
-                <div id="bulk-bar" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
-                    <span class="text-sm text-red-600"><span id="selected-count">0</span> ausgewählt</span>
-                    <div class="flex items-center gap-2">
-                        <button onclick="clearSelection()" class="text-xs text-gray-500 hover:text-gray-700">Aufheben</button>
-                        <button onclick="bulkDeletePhotos()" class="text-xs px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">Ausgewählte löschen</button>
+                <div id="bulk-bar" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-red-600 font-medium"><span id="selected-count">0</span> ausgewählt</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearSelection()" class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1">Aufheben</button>
+                            <button onclick="bulkDeletePhotos()" class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                Löschen
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2 pt-2 border-t border-red-200">
+                        <button onclick="selectAllPhotos()" class="text-xs text-red-500 hover:text-red-700">Alle auswählen</button>
+                        <span class="text-red-300">|</span>
+                        <button onclick="clearSelection()" class="text-xs text-red-500 hover:text-red-700">Auswahl aufheben</button>
                     </div>
                 </div>
 
                 {{-- Upload Dropzone --}}
-                <div id="dropzone" class="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center mb-6 cursor-pointer hover:border-gold-300 transition-colors">
+                <div id="dropzone" class="border-2 border-dashed border-gray-200 rounded-xl p-6 sm:p-8 text-center mb-6 cursor-pointer hover:border-gold-300 hover:bg-gold-50/30 transition-colors">
                     <svg class="w-10 h-10 mx-auto text-gold-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
                     </svg>
@@ -99,28 +127,38 @@
                 </div>
 
                 {{-- Photo Grid --}}
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="photo-grid">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3" id="photo-grid">
                     @foreach($photos as $photo)
                     <div class="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group photo-item" data-id="{{ $photo->id }}" data-folder="{{ $photo->folder_id ?? 0 }}">
-                        <div class="absolute top-2 left-2 z-10">
-                            <input type="checkbox" class="photo-checkbox w-5 h-5 rounded border-gray-300 text-gold-400 focus:ring-gold-400 cursor-pointer" value="{{ $photo->id }}" onchange="updateBulkBar()">
+                        {{-- Checkbox (shown in select mode) --}}
+                        <div class="photo-checkbox-wrapper absolute top-2 left-2 z-10 hidden">
+                            <input type="checkbox" class="photo-checkbox w-5 h-5 rounded border-white/80 bg-white/30 backdrop-blur-sm text-gold-400 focus:ring-gold-400 cursor-pointer shadow-sm" value="{{ $photo->id }}" onchange="updateBulkBar()">
                         </div>
-                        <img src="/storage/projects/{{ $photo->filename }}" alt="{{ $photo->original_name }}" class="w-full h-full object-cover cursor-pointer" onclick="openAdminLightbox('{{ $photo->id }}')">
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 flex items-end justify-between">
-                            <span class="text-white text-xs truncate">{{ $photo->original_name }}</span>
-                            <button onclick="deletePhoto({{ $photo->id }})" class="text-white/80 hover:text-red-400 text-lg leading-none shrink-0 ml-2">&times;</button>
+                        {{-- Hover overlay for delete --}}
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"></div>
+                        <img src="/storage/projects/{{ $photo->filename }}" alt="{{ $photo->original_name }}" class="w-full h-full object-cover cursor-pointer" onclick="handlePhotoClick(event, '{{ $photo->id }}')">
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex items-end justify-between">
+                            <span class="text-white text-xs truncate drop-shadow-sm">{{ $photo->original_name }}</span>
+                            <button onclick="deletePhoto({{ $photo->id }})" class="w-7 h-7 flex items-center justify-center text-white/70 hover:text-white hover:bg-red-500/80 rounded transition-colors shrink-0 ml-2" title="Foto löschen">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
                         </div>
                     </div>
                     @endforeach
                 </div>
 
                 @if($photos->isEmpty())
-                <p class="text-center text-gray-300 text-sm py-8">Noch keine Fotos hochgeladen.</p>
+                <div class="text-center py-12">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    <p class="text-gray-400 text-sm">Noch keine Fotos hochgeladen.</p>
+                </div>
                 @endif
             </div>
 
             {{-- Right: Share Links --}}
-            <div class="bg-white rounded-xl border border-gray-100 p-6">
+            <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
                 <h2 class="font-medium text-gray-700 mb-4">Share-Links</h2>
 
                 {{-- Create Share --}}
@@ -135,8 +173,8 @@
                             <input type="text" id="share-password" placeholder="Optional" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-gold-400 outline-none">
                         </div>
                     </div>
-                    <label class="flex items-center gap-2 text-sm text-gray-600">
-                        <input type="checkbox" id="share-download" checked class="rounded text-gold-400">
+                    <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                        <input type="checkbox" id="share-download" checked class="rounded text-gold-400 focus:ring-gold-400">
                         Download erlaubt
                     </label>
                     <button onclick="createShare()" class="w-full py-2.5 bg-gold-400 hover:bg-gold-500 text-white text-sm font-medium rounded-xl transition-colors">
@@ -146,7 +184,7 @@
 
                 {{-- Existing Shares --}}
                 <div class="space-y-3" id="share-list">
-                    @foreach($shares as $share)
+                    @forelse($shares as $share)
                     <div class="p-3 bg-gray-50 rounded-lg" data-id="{{ $share->id }}">
                         <code class="text-xs text-gold-500 block truncate">{{ $share->token }}</code>
                         <div class="flex items-center gap-2 mt-1 text-xs text-gray-400">
@@ -159,7 +197,9 @@
                             <button onclick="deleteShare({{ $share->id }})" class="text-xs px-2 py-1 bg-white border border-gray-200 rounded text-red-400 hover:border-red-300 transition-colors">Löschen</button>
                         </div>
                     </div>
-                    @endforeach
+                    @empty
+                    <p class="text-xs text-gray-400 text-center py-4">Noch keine Share-Links erstellt.</p>
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -178,6 +218,35 @@
 @push('scripts')
 <script>
     const PROJECT_ID = {{ $project->id }};
+    let selectMode = false;
+
+    // === SELECT MODE ===
+    function toggleSelectMode() {
+        selectMode = !selectMode;
+        const btn = document.getElementById('select-mode-btn');
+        const checkboxes = document.querySelectorAll('.photo-checkbox-wrapper');
+
+        if (selectMode) {
+            btn.classList.add('text-gold-600', 'font-medium');
+            btn.classList.remove('text-gray-500');
+            checkboxes.forEach(cb => cb.classList.remove('hidden'));
+        } else {
+            btn.classList.remove('text-gold-600', 'font-medium');
+            btn.classList.add('text-gray-500');
+            checkboxes.forEach(cb => cb.classList.add('hidden'));
+            clearSelection();
+        }
+    }
+
+    function handlePhotoClick(event, photoId) {
+        if (selectMode) {
+            const checkbox = event.target.closest('.photo-item').querySelector('.photo-checkbox');
+            checkbox.checked = !checkbox.checked;
+            updateBulkBar();
+        } else {
+            openAdminLightbox(photoId);
+        }
+    }
 
     // === UPLOAD ===
     const dropzone = document.getElementById('dropzone');
@@ -231,6 +300,30 @@
         if (data.success) {
             showToast('Ordner erstellt');
             location.reload();
+        }
+    }
+
+    function filterPhotosByFolder(folderId) {
+        document.querySelectorAll('.photo-item').forEach(item => {
+            item.style.display = (folderId === null || item.dataset.folder == folderId) ? '' : 'none';
+        });
+        document.querySelectorAll('.folder-tab').forEach(tab => {
+            const isActive = folderId === null ? tab.dataset.folder === '' : tab.dataset.folder == folderId;
+            tab.classList.toggle('bg-gold-50', isActive);
+            tab.classList.toggle('border-gold-400', isActive);
+            tab.classList.toggle('text-gold-600', isActive);
+        });
+    }
+
+    async function deleteFolder(id, name) {
+        if (!confirm('Ordner "' + name + '" und alle enthaltenen Fotos löschen?')) return;
+        const res = await fetch('/admin/api/delete?type=folder&id=' + id);
+        const data = await res.json();
+        if (data.success) {
+            showToast('Ordner gelöscht');
+            location.reload();
+        } else {
+            showToast('Fehler beim Löschen', 'error');
         }
     }
 
@@ -357,35 +450,6 @@
         const data = await res.json();
         if (data.success) {
             showToast(data.deleted + ' Fotos gelöscht');
-            location.reload();
-        } else {
-            showToast('Fehler beim Löschen', 'error');
-        }
-    }
-
-    // === FOLDER FILTER ===
-    function filterPhotosByFolder(folderId) {
-        document.querySelectorAll('.photo-item').forEach(item => {
-            if (folderId === null || item.dataset.folder == folderId) {
-                item.style.display = '';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-        document.querySelectorAll('.folder-tab').forEach(tab => {
-            const isActive = folderId === null ? tab.dataset.folder === '' : tab.dataset.folder == folderId;
-            tab.classList.toggle('bg-gold-50', isActive);
-            tab.classList.toggle('border-gold-400', isActive);
-            tab.classList.toggle('text-gold-600', isActive);
-        });
-    }
-
-    async function deleteFolder(id, name) {
-        if (!confirm('Ordner "' + name + '" und alle enthaltenen Fotos löschen?')) return;
-        const res = await fetch('/admin/api/delete?type=folder&id=' + id);
-        const data = await res.json();
-        if (data.success) {
-            showToast('Ordner gelöscht');
             location.reload();
         } else {
             showToast('Fehler beim Löschen', 'error');
