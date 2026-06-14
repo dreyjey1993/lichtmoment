@@ -146,11 +146,10 @@
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
-        // Push history state so browser back closes lightbox instead of navigating away
-        if (!window.__lbHistoryPushed) {
-            window.__lbHistoryPushed = true;
-            history.pushState({ lightbox: true }, '');
-        }
+        // Push TWO history states so browser back/swipe lands on our duplicate
+        window.__lbHistoryPushed = true;
+        history.pushState({ lightbox: true }, '');
+        history.pushState({ lightbox: true }, '');
     }
 
     function closeLightbox() {
@@ -160,17 +159,23 @@
         document.body.style.overflow = '';
         document.body.style.position = '';
         document.body.style.width = '';
-        // Pop the history state we pushed
         if (window.__lbHistoryPushed) {
             window.__lbHistoryPushed = false;
-            history.back();
+            history.go(-2);
         }
     }
 
     // Handle browser back / swipe-back while lightbox is open
     window.addEventListener('popstate', function(e) {
-        if (lightbox && !lightbox.classList.contains('hidden')) {
-            closeLightbox();
+        if (lightbox && !lightbox.classList.contains('hidden') && window.__lbHistoryPushed) {
+            window.__lbHistoryPushed = false;
+            history.pushState({ lightbox: true }, '');
+            lightbox.classList.add('hidden');
+            lightbox.classList.remove('flex');
+            lightbox.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
         }
     });
 

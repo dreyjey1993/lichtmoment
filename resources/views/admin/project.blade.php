@@ -430,11 +430,11 @@ try {
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
-        // Push history state so browser back closes lightbox instead of navigating away
-        if (!window.__lbHistoryPushed) {
-            window.__lbHistoryPushed = true;
-            history.pushState({ lightbox: true }, '');
-        }
+        // Push TWO history states so browser back/swipe lands on our duplicate
+        // instead of navigating away to the dashboard
+        window.__lbHistoryPushed = true;
+        history.pushState({ lightbox: true }, '');
+        history.pushState({ lightbox: true }, '');
     }
 
     function closeAdminLightbox() {
@@ -444,18 +444,25 @@ try {
         document.body.style.overflow = '';
         document.body.style.position = '';
         document.body.style.width = '';
-        // Pop the history state we pushed
         if (window.__lbHistoryPushed) {
             window.__lbHistoryPushed = false;
-            history.back();
+            history.go(-2);
         }
     }
 
-    // Handle browser back button while lightbox is open
+    // Handle browser back / swipe-back while lightbox is open
     window.addEventListener('popstate', function(e) {
         const lb = document.getElementById('admin-lightbox');
-        if (lb && !lb.classList.contains('hidden')) {
-            closeAdminLightbox();
+        if (lb && !lb.classList.contains('hidden') && window.__lbHistoryPushed) {
+            // User tried to navigate back — immediately push state back
+            // to prevent actual page navigation, then close lightbox
+            window.__lbHistoryPushed = false;
+            history.pushState({ lightbox: true }, '');
+            lb.classList.add('hidden');
+            lb.classList.remove('flex');
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
         }
     });
 
@@ -476,7 +483,7 @@ try {
         lbTouchStartY = e.touches[0].clientY;
     }, { passive: true });
     lbEl?.addEventListener('touchmove', (e) => {
-        // Prevent browser back-swipe gesture when lightbox is open
+        // Block ALL touchmove on lightbox to prevent iOS/Android back-swipe gesture
         e.preventDefault();
     }, { passive: false });
     lbEl?.addEventListener('touchend', (e) => {
