@@ -87,7 +87,7 @@
                         <span class="badge badge-gray ml-1">{{ $photos->count() }}</span>
                     </button>
                     @foreach($folders as $folder)
-                    <div class="inline-flex items-center">
+                    <div class="inline-flex items-center" data-folder-id="{{ $folder->id }}">
                         <button onclick="filterPhotosByFolder({{ $folder->id }})" class="tab {{ request('folder') == $folder->id ? 'tab-active' : 'tab-inactive' }} !rounded-r-none !border-r-0" data-folder="{{ $folder->id }}">
                             {{ $folder->name }}
                             <span class="badge badge-gray ml-1">{{ $photos->where('folder_id', $folder->id)->count() }}</span>
@@ -365,8 +365,21 @@
         const res = await fetch('/admin/api/delete', { method: 'POST', body: fd });
         const data = await res.json();
         if (data.success) {
+            // Remove folder button
+            const btn = document.querySelector(`[data-folder-id="${id}"]`);
+            if (btn) {
+                btn.style.transition = 'opacity 0.3s';
+                btn.style.opacity = '0';
+                setTimeout(() => btn.remove(), 300);
+            }
+            // Remove photos in this folder from grid
+            document.querySelectorAll(`.photo-item[data-folder="${id}"]`).forEach(el => {
+                el.style.transition = 'opacity 0.3s, transform 0.3s';
+                el.style.opacity = '0';
+                el.style.transform = 'scale(0.9)';
+                setTimeout(() => el.remove(), 300);
+            });
             showToast('Ordner gelöscht');
-            location.reload();
         } else {
             showToast('Fehler beim Löschen', 'error');
         }
@@ -410,7 +423,35 @@
         const data = await res.json();
         if (data.success) {
             showToast('Share-Link erstellt');
-            location.reload();
+            // Insert new share card dynamically
+            const list = document.getElementById('share-list');
+            const emptyMsg = list.querySelector('.text-center');
+            if (emptyMsg) emptyMsg.remove();
+            const downloadIcon = data.download_enabled ? '<span class="inline-flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></span>' : '';
+            const passwordIcon = data.password_hash ? '<span>🔒</span>' : '';
+            const expiryHtml = data.expires_at ? `<span class="inline-flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> ${data.expires_at}</span>` : '';
+            const card = document.createElement('div');
+            card.className = 'share-card';
+            card.dataset.id = data.id;
+            card.style.opacity = '0';
+            card.style.transition = 'opacity 0.3s';
+            card.innerHTML = `
+                <code class="text-xs text-gold-500 block truncate font-mono">${data.token}</code>
+                <div class="flex items-center gap-2 mt-1.5 text-xs text-gray-400">
+                    <span class="inline-flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg> 0</span>
+                    ${expiryHtml}
+                    ${passwordIcon}
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="copyShare('${data.token}')" class="btn btn-secondary btn-sm flex-1">Kopieren</button>
+                    <button onclick="deleteShare(${data.id})" class="btn btn-danger btn-sm flex-1">Löschen</button>
+                </div>
+            `;
+            list.appendChild(card);
+            requestAnimationFrame(() => { card.style.opacity = '1'; });
+            // Clear form
+            document.getElementById('share-expiry').value = '';
+            document.getElementById('share-password').value = '';
         } else {
             showToast(data.message || 'Fehler beim Erstellen', 'error');
         }
@@ -544,8 +585,8 @@
         });
         const data = await res.json();
         if (data.success) {
+            clearSelection();
             showToast(data.deleted + ' Fotos gelöscht');
-            location.reload();
         } else {
             showToast('Fehler beim Löschen', 'error');
         }
@@ -560,8 +601,13 @@
         });
         const data = await res.json();
         if (data.success) {
+            document.querySelectorAll('.photo-item').forEach(el => {
+                el.style.transition = 'opacity 0.3s, transform 0.3s';
+                el.style.opacity = '0';
+                el.style.transform = 'scale(0.9)';
+                setTimeout(() => el.remove(), 300);
+            });
             showToast(data.deleted + ' Fotos gelöscht');
-            location.reload();
         } else {
             showToast('Fehler beim Löschen', 'error');
         }
@@ -570,7 +616,11 @@
     // === DELETE ===
     function deleteProject(id, name) {
         if (!confirm('Projekt "' + name + '" wirklich löschen?')) return;
-        fetch('/admin/api/delete?type=project&id=' + id)
+        const fd = new FormData();
+        fd.append('_token', CSRF_TOKEN);
+        fd.append('type', 'project');
+        fd.append('id', id);
+        fetch('/admin/api/delete', { method: 'POST', body: fd })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
@@ -589,9 +639,20 @@
         fd.append('_token', CSRF_TOKEN);
         fd.append('type', 'photo');
         fd.append('id', id);
-        await fetch('/admin/api/delete', { method: 'POST', body: fd });
-        document.querySelector(`[data-id="${id}"]`)?.remove();
-        showToast('Foto gelöscht');
+        const res = await fetch('/admin/api/delete', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+            const el = document.querySelector(`[data-id="${id}"]`);
+            if (el) {
+                el.style.transition = 'opacity 0.3s, transform 0.3s';
+                el.style.opacity = '0';
+                el.style.transform = 'scale(0.9)';
+                setTimeout(() => el.remove(), 300);
+            }
+            showToast('Foto gelöscht');
+        } else {
+            showToast('Fehler beim Löschen', 'error');
+        }
     }
 
     async function deleteShare(id) {
@@ -601,9 +662,15 @@
         fd.append('type', 'share');
         fd.append('id', id);
         const res = await fetch('/admin/api/delete', { method: 'POST', body: fd });
-        if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+            const el = document.querySelector(`[data-id="${id}"]`);
+            if (el) {
+                el.style.transition = 'opacity 0.3s';
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            }
             showToast('Share-Link gelöscht');
-            location.reload();
         } else {
             showToast('Fehler beim Löschen', 'error');
         }

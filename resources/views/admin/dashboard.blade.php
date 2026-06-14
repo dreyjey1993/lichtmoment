@@ -56,7 +56,7 @@
         @else
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             @foreach($projects as $project)
-            <div class="card card-hover group relative">
+            <div class="card card-hover group relative" data-project-id="{{ $project->id }}">
                 <a href="{{ route('admin.project.detail', $project->id) }}" class="block">
                     <div class="aspect-[16/10] bg-gradient-to-br from-gold-50 to-gold-100 flex items-center justify-center overflow-hidden">
                         @if($project->cover_image)
@@ -101,8 +101,21 @@ function deleteProject(id, name) {
         .then(r => r.json())
         .then(data => {
             if (data.success) {
+                const card = document.querySelector(`[data-project-id="${id}"]`);
+                if (card) {
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Check if no projects left
+                        const remaining = document.querySelectorAll('[data-project-id]');
+                        if (remaining.length === 0) {
+                            location.reload(); // show empty state
+                        }
+                    }, 300);
+                }
                 showToast('Projekt gelöscht');
-                setTimeout(() => location.reload(), 500);
             } else {
                 showToast('Fehler beim Löschen', 'error');
             }
