@@ -27,7 +27,7 @@ Route::post('/share/download/zip', [ShareController::class, 'downloadZip'])->nam
 
 // Admin
 Route::get('/admin/login', [AdminController::class, 'loginPage'])->name('admin.login');
-Route::post('/admin/login', [AdminController::class, 'login']);
+Route::post('/admin/login', [AdminController::class, 'login'])->middleware('throttle:5,1');
 Route::get('/admin/logout', [AdminController::class, 'logout'])->name('admin.logout');
 
 Route::middleware('admin.auth')->group(function () {
@@ -42,5 +42,7 @@ Route::middleware('admin.auth')->group(function () {
     Route::post('/admin/share/create', [AdminController::class, 'createShareLink'])->name('admin.share.create');
     Route::post('/admin/project/{id}/settings', [AdminController::class, 'updateProjectSettings'])->name('admin.project.settings');
     Route::get('/admin/api/shares/{projectId}', [AdminController::class, 'getShareLinks'])->name('admin.api.shares');
-    Route::get('/admin/api/delete', [AdminController::class, 'deleteItem'])->name('admin.api.delete');
+    Route::post('/admin/api/delete', [AdminController::class, 'deleteItem'])->name('admin.api.delete');
+    Route::post('/admin/api/bulk-delete-photos', [AdminController::class, 'bulkDeletePhotos'])->name('admin.api.bulk-delete-photos');
+    Route::post('/admin/api/delete-all-photos', [AdminController::class, 'deleteAllPhotos'])->name('admin.api.delete-all-photos');
 });

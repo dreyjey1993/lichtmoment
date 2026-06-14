@@ -28,6 +28,7 @@ class AdminController extends Controller
         $user = \App\Models\User::where('email', 'admin@lichtmoment.de')->first();
 
         if ($user && Hash::check($request->password, $user->password)) {
+            session()->regenerate();
             session(['admin_id' => $user->id]);
             return redirect()->route('admin.dashboard');
         }
@@ -49,22 +50,29 @@ class AdminController extends Controller
 
     public function newProject()
     {
-        return view('admin.project', [
-            'project' => null,
-            'folders' => [],
-            'photos' => [],
-            'shares' => [],
-        ]);
+        return view('admin.create');
     }
 
     public function createProject(Request $request)
     {
-        $request->validate(['name' => 'required|string|max:255']);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'cover_image' => 'sometimes|nullable|file|mimes:jpg,jpeg,webp,png|max:5120',
+        ]);
+
+        $coverImage = null;
+        if ($request->hasFile('cover_image')) {
+            $file = $request->file('cover_image');
+            $filename = 'cover_' . Str::random(16) . '.' . $file->extension();
+            $file->storeAs('projects', $filename, 'public');
+            $coverImage = $filename;
+        }
 
         $project = Project::create([
             'name' => $request->name,
             'description' => $request->description ?? '',
             'slug' => Str::slug($request->name) . '-' . Str::random(6),
+            'cover_image' => $coverImage,
         ]);
 
         // Create default folder
@@ -194,8 +202,8 @@ class AdminController extends Controller
 
     public function deleteItem(Request $request)
     {
-        $type = $request->query('type');
-        $id = (int)$request->query('id');
+        $type = $request->input('type');
+        $id = (int)$request->input('id');
 
         if (!$id) {
             return response()->json(['error' => 'ID fehlt'], 400);
@@ -227,5 +235,41 @@ class AdminController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    public function bulkDeletePhotos(Request $request)
+    {
+        $request->validate([
+            'photo_ids' => 'required|array',
+            'photo_ids.*' => 'integer',
+        ]);
+
+        $ids = $request->input('photo_ids');
+        $photos = Photo::whereIn('id', $ids)->get();
+        $deleted = 0;
+
+        foreach ($photos as $photo) {
+            Storage::disk('public')->delete('projects/' . $photo->filename);
+            $photo->delete();
+            $deleted++;
+        }
+
+        return response()->json(['success' => true, 'deleted' => $deleted]);
+    }
+
+    public function deleteAllPhotos(Request $request)
+    {
+        $request->validate(['project_id' => 'required|integer']);
+
+        $photos = Photo::where('project_id', $request->project_id)->get();
+        $deleted = 0;
+
+        foreach ($photos as $photo) {
+            Storage::disk('public')->delete('projects/' . $photo->filename);
+            $photo->delete();
+            $deleted++;
+        }
+
+        return response()->json(['success' => true, 'deleted' => $deleted]);
     }
 }

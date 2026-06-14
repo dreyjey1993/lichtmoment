@@ -21,7 +21,11 @@ class ShareController extends Controller
         }
 
         if ($shareLink->isExpired()) {
-            return response()->view('share.error', ['message' => 'Dieser Link ist abgelaufen.'], 410);
+            return response()->view('share.error', [
+                'message' => 'Dieser Link ist abgelaufen.',
+                'expired' => true,
+                'expiredAt' => $shareLink->expires_at ? \Carbon\Carbon::parse($shareLink->expires_at)->format('d.m.Y') : null,
+            ], 410);
         }
 
         $shareLink->increment('access_count');
@@ -44,7 +48,8 @@ class ShareController extends Controller
             'email' => 'info@lichtmoment.de',
         ];
 
-        $needsPassword = !empty($shareLink->password_hash);
+        $hasPassword = !empty($shareLink->password_hash) || !empty($shareLink->project->password_hash);
+        $needsPassword = $hasPassword && !session('share_access_' . $shareLink->token);
 
         return view('share.gallery', compact(
             'project', 'photos', 'folders', 'shareLink',
@@ -92,6 +97,7 @@ class ShareController extends Controller
         $passwordToCheck = $shareLink->password_hash ?: $shareLink->project->password_hash;
 
         if ($passwordToCheck && password_verify($request->password, $passwordToCheck)) {
+            session(['share_access_' . $shareLink->token => true]);
             return response()->json(['success' => true]);
         }
 

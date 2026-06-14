@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $project->name . ' – Lichtmoment Admin')
+@section('title', ($project ? $project->name . ' – ' : 'Neues Projekt – ') . 'Lichtmoment Admin')
 
 @php $adminNav = true; @endphp
 
@@ -308,6 +308,7 @@ try {
 
     async function uploadFiles(files) {
         const fd = new FormData();
+        fd.append('_token', CSRF_TOKEN);
         fd.append('project_id', PROJECT_ID);
         for (const f of files) fd.append('photos[]', f);
 
@@ -332,6 +333,7 @@ try {
         if (!name) return showToast('Ordnername fehlt', 'error');
 
         const fd = new FormData();
+        fd.append('_token', CSRF_TOKEN);
         fd.append('project_id', PROJECT_ID);
         fd.append('name', name);
         if (parentId) fd.append('parent_id', parentId);
@@ -357,7 +359,11 @@ try {
 
     async function deleteFolder(id, name) {
         if (!confirm('Ordner "' + name + '" und alle enthaltenen Fotos löschen?')) return;
-        const res = await fetch('/admin/api/delete?type=folder&id=' + id);
+        const fd = new FormData();
+        fd.append('_token', CSRF_TOKEN);
+        fd.append('type', 'folder');
+        fd.append('id', id);
+        const res = await fetch('/admin/api/delete', { method: 'POST', body: fd });
         const data = await res.json();
         if (data.success) {
             showToast('Ordner gelöscht');
@@ -370,6 +376,7 @@ try {
     // === SETTINGS ===
     document.getElementById('toggle-download')?.addEventListener('change', function() {
         const body = new URLSearchParams();
+        body.append('_token', CSRF_TOKEN);
         body.append('download_enabled', this.checked ? 1 : 0);
         fetch(`/admin/project/${PROJECT_ID}/settings`, { method: 'POST', body: body });
         showToast('Einstellung aktualisiert');
@@ -379,6 +386,7 @@ try {
         const pwd = document.getElementById('project-password').value;
         if (!pwd) return showToast('Passwort eingeben', 'error');
         const body = new URLSearchParams();
+        body.append('_token', CSRF_TOKEN);
         body.append('password', pwd);
         await fetch(`/admin/project/${PROJECT_ID}/settings`, { method: 'POST', body: body });
         showToast('Passwort gesetzt');
@@ -387,6 +395,7 @@ try {
     // === SHARE LINKS ===
     async function createShare() {
         const fd = new FormData();
+        fd.append('_token', CSRF_TOKEN);
         fd.append('project_id', PROJECT_ID);
         const expiry = document.getElementById('share-expiry').value;
         if (expiry) fd.append('expires_days', expiry);
@@ -571,14 +580,22 @@ try {
 
     async function deletePhoto(id) {
         if (!confirm('Foto löschen?')) return;
-        await fetch(`/admin/api/delete?type=photo&id=${id}`);
+        const fd = new FormData();
+        fd.append('_token', CSRF_TOKEN);
+        fd.append('type', 'photo');
+        fd.append('id', id);
+        await fetch('/admin/api/delete', { method: 'POST', body: fd });
         document.querySelector(`[data-id="${id}"]`)?.remove();
         showToast('Foto gelöscht');
     }
 
     async function deleteShare(id) {
         if (!confirm('Share-Link löschen?')) return;
-        await fetch(`/admin/api/delete?type=share&id=${id}`);
+        const fd = new FormData();
+        fd.append('_token', CSRF_TOKEN);
+        fd.append('type', 'share');
+        fd.append('id', id);
+        await fetch('/admin/api/delete', { method: 'POST', body: fd });
         document.querySelector(`[data-id="${id}"]`)?.remove();
         showToast('Share-Link gelöscht');
     }

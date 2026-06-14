@@ -228,7 +228,7 @@ class LichtmomentTest extends TestCase
         $user = User::where('email', 'admin@lichtmoment.de')->first();
         $project = Project::first();
 
-        $fakeImage = \Illuminate\Http\Testing\File::fake()->image('test.jpg', 800, 600)->size(100);
+        $fakeImage = \Illuminate\Http\Testing\File::fake()->create('test.jpg', 100, 'image/jpeg');
 
         $response = $this->actingAs($user, 'web')->post('/admin/upload', [
             'project_id' => $project->id,
@@ -243,7 +243,7 @@ class LichtmomentTest extends TestCase
     {
         $user = User::where('email', 'admin@lichtmoment.de')->first();
 
-        $fakeImage = \Illuminate\Http\Testing\File::fake()->image('test.jpg', 800, 600)->size(100);
+        $fakeImage = \Illuminate\Http\Testing\File::fake()->create('test.jpg', 100, 'image/jpeg');
 
         $response = $this->actingAs($user, 'web')->post('/admin/upload', [
             'photos' => [$fakeImage],
@@ -447,7 +447,7 @@ class LichtmomentTest extends TestCase
         $photo = Photo::where('project_id', $project->id)->first();
         $this->assertNotNull($photo);
 
-        $response = $this->actingAs($user, 'web')->get('/admin/api/delete?type=photo&id=' . $photo->id);
+        $response = $this->actingAs($user, 'web')->post('/admin/api/delete', ['type' => 'photo', 'id' => $photo->id]);
         $response->assertStatus(200);
         $this->assertDatabaseMissing('photos', ['id' => $photo->id]);
     }
@@ -459,7 +459,7 @@ class LichtmomentTest extends TestCase
         $folder = Folder::where('project_id', $project->id)->first();
         $this->assertNotNull($folder);
 
-        $response = $this->actingAs($user, 'web')->get('/admin/api/delete?type=folder&id=' . $folder->id);
+        $response = $this->actingAs($user, 'web')->post('/admin/api/delete', ['type' => 'folder', 'id' => $folder->id]);
         $response->assertStatus(200);
         $this->assertDatabaseMissing('folders', ['id' => $folder->id]);
     }
@@ -473,7 +473,7 @@ class LichtmomentTest extends TestCase
             'token' => 'deletetest1234567',
         ]);
 
-        $response = $this->actingAs($user, 'web')->get('/admin/api/delete?type=share&id=' . $share->id);
+        $response = $this->actingAs($user, 'web')->post('/admin/api/delete', ['type' => 'share', 'id' => $share->id]);
         $response->assertStatus(200);
         $this->assertDatabaseMissing('share_links', ['id' => $share->id]);
     }
@@ -498,7 +498,7 @@ class LichtmomentTest extends TestCase
             'token' => 'cascadetest12345',
         ]);
 
-        $response = $this->actingAs($user, 'web')->get('/admin/api/delete?type=project&id=' . $project->id);
+        $response = $this->actingAs($user, 'web')->post('/admin/api/delete', ['type' => 'project', 'id' => $project->id]);
         $response->assertStatus(200);
         $this->assertDatabaseMissing('projects', ['id' => $project->id]);
         $this->assertDatabaseMissing('photos', ['project_id' => $project->id]);
@@ -509,7 +509,7 @@ class LichtmomentTest extends TestCase
     {
         $user = User::where('email', 'admin@lichtmoment.de')->first();
 
-        $response = $this->actingAs($user, 'web')->get('/admin/api/delete?type=photo&id=');
+        $response = $this->actingAs($user, 'web')->post('/admin/api/delete', ['type' => 'photo', 'id' => '']);
         $response->assertStatus(400);
     }
 
@@ -619,7 +619,7 @@ class LichtmomentTest extends TestCase
     {
         $user = User::where('email', 'admin@lichtmoment.de')->first();
 
-        $response = $this->actingAs($user, 'web')->get('/admin/api/delete?type=photo&id=99999');
+        $response = $this->actingAs($user, 'web')->post('/admin/api/delete', ['type' => 'photo', 'id' => 99999]);
         $response->assertStatus(200);
     }
 
@@ -633,7 +633,7 @@ class LichtmomentTest extends TestCase
             'POST /admin/folder/create',
             'POST /admin/share/create',
             'POST /admin/project/1/settings',
-            'GET /admin/api/delete?type=photo&id=1',
+            'POST /admin/api/delete',
             'GET /admin/api/shares/1',
         ];
 

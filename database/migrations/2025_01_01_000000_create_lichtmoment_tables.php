@@ -38,7 +38,7 @@ return new class extends Migration
                 $table->string('name');
                 $table->text('description')->default('');
                 $table->string('slug')->unique();
-                $table->string('cover_image')->default('');
+                $table->string('cover_image')->nullable();
                 $table->boolean('download_enabled')->default(true);
                 $table->string('password_hash')->nullable();
                 $table->timestamps();

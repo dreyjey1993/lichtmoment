@@ -17,8 +17,8 @@
             </a>
         </div>
 
-        {{-- Quick Create (collapsed by default on mobile) --}}
-        <details class="sm:hidden mb-6 card overflow-hidden">
+        {{-- Quick Create --}}
+        <details class="mb-6 card overflow-hidden" {{ $projects->isEmpty() ? 'open' : '' }}>
             <summary class="px-4 py-3 text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-50">Schnell erstellen</summary>
             <div class="px-4 pb-4 border-t border-gray-100 pt-3">
                 <form action="{{ route('admin.project.create') }}" method="POST" class="flex gap-2">
@@ -93,7 +93,11 @@
 <script>
 function deleteProject(id, name) {
     if (!confirm('Projekt "' + name + '" wirklich löschen?')) return;
-    fetch('/admin/api/delete?type=project&id=' + id)
+    const fd = new FormData();
+    fd.append('_token', CSRF_TOKEN);
+    fd.append('type', 'project');
+    fd.append('id', id);
+    fetch('/admin/api/delete', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(data => {
             if (data.success) {

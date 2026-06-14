@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('title', $project->name . ' – Galerie')
+@section('og_title', $project->name . ' – Galerie | Lichtmoment')
+@section('og_description', 'Fotos & Videos von ' . $project->name . ' – Hochzeitsfotografie von Markus Knuth')
 
 @php $noFooter = false; @endphp
 

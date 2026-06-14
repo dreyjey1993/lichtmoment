@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Lichtmoment – Hochzeitsfotografie')</title>
     <meta name="description" content="Hochzeitsfotografie mit Seele – Markus Knuth">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta property="og:title" content="@yield('og_title', 'Lichtmoment – Hochzeitsfotografie')">
+    <meta property="og:description" content="@yield('og_description', 'Hochzeitsfotografie mit Seele – Markus Knuth')">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url('/') }}">
+    <meta name="twitter:card" content="summary_large_image">
 
     @vite(["resources/css/app.css", "resources/js/app.js"])
 
@@ -57,6 +65,13 @@
 
     {{-- Toast notification --}}
     <script>
+        // CSRF token for all AJAX requests
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        window.getCsrfHeaders = function() {
+            return { 'X-CSRF-TOKEN': CSRF_TOKEN };
+        };
+
         window.showToast = function(msg, type = 'success') {
             const toast = document.createElement('div');
             toast.className = 'fixed bottom-6 right-6 z-[9999] px-6 py-3 rounded-xl text-sm font-medium shadow-lg transform translate-y-4 opacity-0 transition-all duration-300 ' +

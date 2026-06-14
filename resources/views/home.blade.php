@@ -14,11 +14,12 @@
     </div>
 </section>
 
-<!-- Portfolio -->
+{{-- Portfolio --}}
+@if($portfolioPhotos->isNotEmpty())
 <section class="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto" id="portfolio">
     <h2 class="font-serif text-3xl sm:text-4xl font-light text-center mb-8 sm:mb-12 text-gray-700">Portfolio</h2>
     <div class="columns-1 md:columns-2 lg:columns-3 gap-4 sm:gap-6">
-        @forelse($portfolioPhotos as $photo)
+        @foreach($portfolioPhotos as $photo)
         <div class="break-inside-avoid mb-4 sm:mb-6 rounded-xl overflow-hidden shadow-sm bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
             @if(str_starts_with($photo->filename, 'portfolio/'))
                 <img src="/storage/{{ $photo->filename }}" alt="{{ $photo->original_name }}" class="w-full" loading="lazy">
@@ -26,17 +27,10 @@
                 <img src="{{ $photo->filename }}" alt="{{ $photo->original_name }}" class="w-full" loading="lazy">
             @endif
         </div>
-        @empty
-            @for($i = 1; $i <= 6; $i++)
-            <div class="break-inside-avoid mb-4 sm:mb-6 rounded-xl overflow-hidden shadow-sm bg-white">
-                <div class="w-full aspect-[4/3] bg-gradient-to-br from-gold-50 to-gold-100 flex items-center justify-center">
-                    <span class="font-serif text-2xl sm:text-3xl text-gold-300">{{ $i }}</span>
-                </div>
-            </div>
-            @endfor
-        @endforelse
+        @endforeach
     </div>
 </section>
+@endif
 
 <!-- About / Photographer -->
 <section class="py-16 sm:py-24 px-4 sm:px-6 bg-white" id="about">
