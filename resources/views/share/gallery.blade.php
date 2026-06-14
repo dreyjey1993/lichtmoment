@@ -128,6 +128,8 @@
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
     let currentIndex = 0;
+    let lbTouchStartX = 0;
+    let lbTouchStartY = 0;
 
     function getVisibleItems() {
         return Array.from(document.querySelectorAll('.gallery-item')).filter(el => el.style.display !== 'none');
@@ -141,13 +143,36 @@
         lightbox.classList.remove('hidden');
         lightbox.classList.add('flex');
         lightbox.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        // Push history state so browser back closes lightbox instead of navigating away
+        if (!window.__lbHistoryPushed) {
+            window.__lbHistoryPushed = true;
+            history.pushState({ lightbox: true }, '');
+        }
     }
 
     function closeLightbox() {
         lightbox.classList.add('hidden');
         lightbox.classList.remove('flex');
         lightbox.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        // Pop the history state we pushed
+        if (window.__lbHistoryPushed) {
+            window.__lbHistoryPushed = false;
+            history.back();
+        }
     }
+
+    // Handle browser back / swipe-back while lightbox is open
+    window.addEventListener('popstate', function(e) {
+        if (lightbox && !lightbox.classList.contains('hidden')) {
+            closeLightbox();
+        }
+    });
 
     function prevImage() {
         const items = getVisibleItems();
@@ -173,6 +198,23 @@
     lightbox?.addEventListener('click', (e) => {
         if (e.target === lightbox || e.target.id === 'lightbox-img') closeLightbox();
     });
+
+    // Touch swipe for mobile — block browser back-swipe
+    lightbox?.addEventListener('touchstart', (e) => {
+        lbTouchStartX = e.touches[0].clientX;
+        lbTouchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    lightbox?.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+    }, { passive: false });
+    lightbox?.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - lbTouchStartX;
+        const dy = e.changedTouches[0].clientY - lbTouchStartY;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+            if (dx < 0) nextImage();
+            else prevImage();
+        }
+    }, { passive: true });
 
     // === FOLDER FILTER ===
     function filterByFolder(folderId) {
