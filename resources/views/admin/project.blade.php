@@ -247,7 +247,6 @@
 
 @push('scripts')
 <script>
-try {
     const PROJECT_ID = {{ $project->id }};
     let selectMode = false;
 
@@ -404,10 +403,16 @@ try {
         fd.append('download_enabled', document.getElementById('share-download').checked ? '1' : '0');
 
         const res = await fetch('/admin/share/create', { method: 'POST', body: fd });
+        if (!res.ok) {
+            showToast('Fehler beim Erstellen', 'error');
+            return;
+        }
         const data = await res.json();
         if (data.success) {
             showToast('Share-Link erstellt');
             location.reload();
+        } else {
+            showToast(data.message || 'Fehler beim Erstellen', 'error');
         }
     }
 
@@ -595,9 +600,13 @@ try {
         fd.append('_token', CSRF_TOKEN);
         fd.append('type', 'share');
         fd.append('id', id);
-        await fetch('/admin/api/delete', { method: 'POST', body: fd });
-        document.querySelector(`[data-id="${id}"]`)?.remove();
-        showToast('Share-Link gelöscht');
+        const res = await fetch('/admin/api/delete', { method: 'POST', body: fd });
+        if (res.ok) {
+            showToast('Share-Link gelöscht');
+            location.reload();
+        } else {
+            showToast('Fehler beim Löschen', 'error');
+        }
     }
 
     // === KEYBOARD ===
@@ -609,7 +618,6 @@ try {
             if (e.key === 'ArrowRight') adminLbNext();
         }
     });
-} catch(e) { console.error('Admin script error:', e.message, e.stack); }
 </script>
 @endpush
 @endsection
