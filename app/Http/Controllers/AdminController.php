@@ -164,8 +164,12 @@ class AdminController extends Controller
 
         return response()->json([
             'success' => true,
+            'id' => $share->id,
             'token' => $token,
             'url' => route('share.show', $token),
+            'download_enabled' => (bool)$share->download_enabled,
+            'password_hash' => $share->password_hash ? true : null,
+            'expires_at' => $share->expires_at ? $share->expires_at->format('d.m.Y') : null,
         ]);
     }
 
