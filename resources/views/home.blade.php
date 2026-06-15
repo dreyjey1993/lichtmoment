@@ -88,25 +88,24 @@
     ]));
     let portfolioLbIndex = 0;
 
-    // Zoom/Pan state — all coordinates in "image space" (pre-scale pixels)
-    // transform = translate(offsetX, offsetY) scale(zoom)
-    // So a point (x,y) in the original image appears at (x*zoom + offsetX, y*zoom + offsetY) on screen
+    // Zoom/Pan state
+    // We use transform-origin: center center, so:
+    //   screenPos = viewportCenter + (imagePoint - imageCenter) * zoom + panOffset
+    // where panOffset is in screen pixels.
+    // Equivalently: screenPos = imagePoint * zoom + (viewportCenter - imageCenter * zoom + panOffset)
+    // We store panX, panY as the total translation in screen pixels.
     let zoom = 1;
-    let offsetX = 0;
-    let offsetY = 0;
+    let panX = 0;
+    let panY = 0;
 
     let isDragging = false;
     let dragStartClientX = 0;
     let dragStartClientY = 0;
-    let dragStartOffsetX = 0;
-    let dragStartOffsetY = 0;
+    let dragStartPanX = 0;
+    let dragStartPanY = 0;
 
     let pinchStartDist = 0;
     let pinchStartZoom = 1;
-    let pinchStartOffsetX = 0;
-    let pinchStartOffsetY = 0;
-    let pinchCenterClientX = 0;
-    let pinchCenterClientY = 0;
 
     let zoomIndicatorTimer = null;
 
@@ -119,44 +118,41 @@
     function applyTransform() {
         const img = document.getElementById('portfolio-lb-img');
         if (img) {
-            img.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`;
+            img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
         }
-        // Clamp pan so image doesn't drift off-screen
-        clampPan();
-    }
-
-    function clampPan() {
-        const img = document.getElementById('portfolio-lb-img');
-        if (!img || zoom <= 1) { offsetX = 0; offsetY = 0; return; }
-        const rect = img.getBoundingClientRect();
-        const displayedW = rect.width * zoom;
-        const displayedH = rect.height * zoom;
-        const maxPanX = Math.max(0, (displayedW - rect.width) / 2);
-        const maxPanY = Math.max(0, (displayedH - rect.height) / 2);
-        offsetX = Math.max(-maxPanX, Math.min(maxPanX, offsetX));
-        offsetY = Math.max(-maxPanY, Math.min(maxPanY, offsetY));
     }
 
     function resetZoomPan() {
         zoom = 1;
-        offsetX = 0;
-        offsetY = 0;
+        panX = 0;
+        panY = 0;
         applyTransform();
     }
 
     // --- Zoom at a screen point (clientX, clientY) ---
-    // The point on the image under the cursor must stay at the same screen position after zoom.
-    // Screen point S = (imgPoint * zoom) + offset
-    // We want S to stay constant while zoom changes.
-    // imgPoint = (S - offset) / zoom
-    // newOffset = S - imgPoint * newZoom = S - (S - offset) / zoom * newZoom
+    // With transform-origin: center center:
+    //   screenPoint = center + (imagePoint - center) * zoom + pan
+    // So: imagePoint = center + (screenPoint - center - pan) / zoom
+    // After zoom: newPan = screenPoint - center - (imagePoint - center) * newZoom
+    //                       = screenPoint - center - (screenPoint - center - pan) / zoom * newZoom
+    //                       = (screenPoint - center) * (1 - newZoom/zoom) + pan * (newZoom/zoom)
     function zoomAt(clientX, clientY, newZoom) {
-        newZoom = Math.min(MAX_ZOOM, Math.min(MIN_ZOOM, newZoom));
+        newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
         if (newZoom === zoom) return;
+
+        const img = document.getElementById('portfolio-lb-img');
+        const rect = img.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+
         const scale = newZoom / zoom;
-        offsetX = clientX - (clientX - offsetX) * scale;
-        offsetY = clientY - (clientY - offsetY) * scale;
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+
+        panX = dx * (1 - scale) + panX * scale;
+        panY = dy * (1 - scale) + panY * scale;
         zoom = newZoom;
+
         applyTransform();
         showZoomIndicator();
     }
@@ -249,15 +245,15 @@
         isDragging = true;
         dragStartClientX = e.clientX;
         dragStartClientY = e.clientY;
-        dragStartOffsetX = offsetX;
-        dragStartOffsetY = offsetY;
+        dragStartPanX = panX;
+        dragStartPanY = panY;
         panContainer.style.cursor = 'grabbing';
     });
 
     document.addEventListener('mousemove', function(e) {
         if (!isDragging) return;
-        offsetX = dragStartOffsetX + (e.clientX - dragStartClientX);
-        offsetY = dragStartOffsetY + (e.clientY - dragStartClientY);
+        panX = dragStartPanX + (e.clientX - dragStartClientX);
+        panY = dragStartPanY + (e.clientY - dragStartClientY);
         applyTransform();
     });
 
@@ -284,27 +280,21 @@
             isDragging = true;
             dragStartClientX = e.touches[0].clientX;
             dragStartClientY = e.touches[0].clientY;
-            dragStartOffsetX = offsetX;
-            dragStartOffsetY = offsetY;
+            dragStartPanX = panX;
+            dragStartPanY = panY;
         } else if (e.touches.length === 2) {
-            // End single-finger drag
             isDragging = false;
-            // Record pinch start state
             const t0 = e.touches[0], t1 = e.touches[1];
             pinchStartDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
             pinchStartZoom = zoom;
-            pinchStartOffsetX = offsetX;
-            pinchStartOffsetY = offsetY;
-            pinchCenterClientX = (t0.clientX + t1.clientX) / 2;
-            pinchCenterClientY = (t0.clientY + t1.clientY) / 2;
         }
     }, { passive: true });
 
     panContainer?.addEventListener('touchmove', function(e) {
         if (e.touches.length === 1 && isDragging) {
             e.preventDefault();
-            offsetX = dragStartOffsetX + (e.touches[0].clientX - dragStartClientX);
-            offsetY = dragStartOffsetY + (e.touches[0].clientY - dragStartClientY);
+            panX = dragStartPanX + (e.touches[0].clientX - dragStartClientX);
+            panY = dragStartPanY + (e.touches[0].clientY - dragStartClientY);
             applyTransform();
         } else if (e.touches.length === 2) {
             e.preventDefault();
@@ -314,13 +304,7 @@
                 const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinchStartZoom * (dist / pinchStartDist)));
                 const cx = (t0.clientX + t1.clientX) / 2;
                 const cy = (t0.clientY + t1.clientY) / 2;
-                // Zoom at the pinch center: keep the point under the center fixed
-                const scale = newZoom / zoom;
-                offsetX = cx - (cx - offsetX) * scale;
-                offsetY = cy - (cy - offsetY) * scale;
-                zoom = newZoom;
-                applyTransform();
-                showZoomIndicator();
+                zoomAt(cx, cy, newZoom);
             }
         }
     }, { passive: false });
