@@ -96,7 +96,10 @@
 <div id="lightbox" class="fixed inset-0 z-[9999] bg-black/95 hidden items-center justify-center p-6" aria-hidden="true">
     <button class="absolute top-4 right-4 text-white text-4xl hover:text-gold-400 transition-colors" onclick="closeLightbox()">&times;</button>
     <button class="absolute left-4 top-1/2 -translate-y-1/2 text-white text-3xl hover:text-gold-400 transition-colors hidden md:block" onclick="prevImage()">&#10094;</button>
-    <img id="lightbox-img" src="" alt="" class="max-w-[90vw] max-h-[85vh] object-contain rounded-lg">
+    <div class="absolute inset-0 flex items-center justify-center overflow-hidden z-[1]" id="share-lb-pan-container">
+        <img id="share-lb-img" src="" alt="" class="max-w-[90vw] max-h-[85vh] object-contain rounded-lg select-none" draggable="false">
+    </div>
+    <div id="share-lb-zoom-indicator" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full opacity-0 transition-opacity duration-300 pointer-events-none z-[9999] font-mono"></div>
     <button class="absolute right-4 top-1/2 -translate-y-1/2 text-white text-3xl hover:text-gold-400 transition-colors hidden md:block" onclick="nextImage()">&#10095;</button>
 </div>
 @endsection
@@ -128,10 +131,35 @@
 
     // === LIGHTBOX ===
     const lightbox = document.getElementById('lightbox');
-    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxImg = document.getElementById('share-lb-img');
     let currentIndex = 0;
     let lbTouchStartX = 0;
     let lbTouchStartY = 0;
+
+    // Zoom/Pan state
+    let shareZoom = 1, sharePanX = 0, sharePanY = 0;
+    let shareIsDragging = false, shareDragStartX = 0, shareDragStartY = 0, shareDragStartPanX = 0, shareDragStartPanY = 0;
+    let sharePinchStartDist = 0, sharePinchStartZoom = 1;
+    let shareZoomTimer = null;
+    const SHARE_MIN_Z = 1, SHARE_MAX_Z = 5, SHARE_WHEEL_F = 1.15;
+
+    function shareApplyTransform() {
+        if (lightboxImg) lightboxImg.style.transform = `translate(${sharePanX}px, ${sharePanY}px) scale(${shareZoom})`;
+    }
+    function shareResetZoom() { shareZoom = 1; sharePanX = 0; sharePanY = 0; shareApplyTransform(); }
+    function shareZoomAt(cx, cy, newZ) {
+        newZ = Math.min(SHARE_MAX_Z, Math.max(SHARE_MIN_Z, newZ));
+        if (newZ === shareZoom) return;
+        const rect = lightboxImg.getBoundingClientRect();
+        const icx = rect.left + rect.width / 2, icy = rect.top + rect.height / 2;
+        const dx = cx - icx, dy = cy - icy, s = newZ / shareZoom;
+        sharePanX = dx * (1 - s) + sharePanX * s;
+        sharePanY = dy * (1 - s) + sharePanY * s;
+        shareZoom = newZ;
+        shareApplyTransform();
+        const el = document.getElementById('share-lb-zoom-indicator');
+        if (el) { el.textContent = Math.round(shareZoom * 100) + '%'; el.classList.remove('opacity-0'); clearTimeout(shareZoomTimer); shareZoomTimer = setTimeout(() => el.classList.add('opacity-0'), 1200); }
+    }
 
     function getVisibleItems() {
         return Array.from(document.querySelectorAll('.gallery-item')).filter(el => el.style.display !== 'none');
@@ -142,13 +170,13 @@
         const items = getVisibleItems();
         if (!items.length) return;
         lightboxImg.src = items[currentIndex].querySelector('img').src;
+        shareResetZoom();
         lightbox.classList.remove('hidden');
         lightbox.classList.add('flex');
         lightbox.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
-        // Push TWO history states so browser back/swipe lands on our duplicate
         window.__lbHistoryPushed = true;
         history.pushState({ lightbox: true }, '');
         history.pushState({ lightbox: true }, '');
@@ -207,21 +235,68 @@
     });
 
     // Touch swipe for mobile — block browser back-swipe
-    lightbox?.addEventListener('touchstart', (e) => {
-        lbTouchStartX = e.touches[0].clientX;
-        lbTouchStartY = e.touches[0].clientY;
-    }, { passive: true });
-    lightbox?.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-    }, { passive: false });
-    lightbox?.addEventListener('touchend', (e) => {
-        const dx = e.changedTouches[0].clientX - lbTouchStartX;
-        const dy = e.changedTouches[0].clientY - lbTouchStartY;
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-            if (dx < 0) nextImage();
-            else prevImage();
+    const sharePanContainer = document.getElementById('share-lb-pan-container');
+    sharePanContainer?.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            shareIsDragging = true;
+            shareDragStartX = e.touches[0].clientX;
+            shareDragStartY = e.touches[0].clientY;
+            shareDragStartPanX = sharePanX;
+            shareDragStartPanY = sharePanY;
+            lbTouchStartX = e.touches[0].clientX;
+            lbTouchStartY = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+            shareIsDragging = false;
+            sharePinchStartDist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+            sharePinchStartZoom = shareZoom;
         }
     }, { passive: true });
+    sharePanContainer?.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && shareIsDragging && shareZoom > 1) {
+            e.preventDefault();
+            sharePanX = shareDragStartPanX + (e.touches[0].clientX - shareDragStartX);
+            sharePanY = shareDragStartPanY + (e.touches[0].clientY - shareDragStartY);
+            shareApplyTransform();
+        } else if (e.touches.length === 2) {
+            e.preventDefault();
+            const dist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+            if (sharePinchStartDist > 0) {
+                const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                shareZoomAt(cx, cy, Math.min(SHARE_MAX_Z, Math.max(SHARE_MIN_Z, sharePinchStartZoom * (dist / sharePinchStartDist))));
+            }
+        }
+    }, { passive: false });
+    sharePanContainer?.addEventListener('touchend', (e) => {
+        if (shareIsDragging && e.touches.length === 0) shareIsDragging = false;
+        // Swipe to change image only when not zoomed
+        if (shareZoom <= 1 && e.changedTouches.length === 1) {
+            const dx = e.changedTouches[0].clientX - lbTouchStartX;
+            const dy = e.changedTouches[0].clientY - lbTouchStartY;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                if (dx < 0) nextImage();
+                else prevImage();
+            }
+        }
+    }, { passive: true });
+
+    // Mouse wheel zoom + drag
+    sharePanContainer?.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        shareZoomAt(e.clientX, e.clientY, shareZoom * (e.deltaY < 0 ? SHARE_WHEEL_F : 1 / SHARE_WHEEL_F));
+    }, { passive: false });
+    sharePanContainer?.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        shareIsDragging = true;
+        shareDragStartX = e.clientX;
+        shareDragStartY = e.clientY;
+        shareDragStartPanX = sharePanX;
+        shareDragStartPanY = sharePanY;
+        sharePanContainer.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mousemove', (e) => { if (!shareIsDragging) return; sharePanX = shareDragStartPanX + (e.clientX - shareDragStartX); sharePanY = shareDragStartPanY + (e.clientY - shareDragStartY); shareApplyTransform(); });
+    document.addEventListener('mouseup', () => { if (shareIsDragging) { shareIsDragging = false; sharePanContainer.style.cursor = shareZoom > 1 ? 'grab' : 'default'; } });
+    sharePanContainer?.addEventListener('dblclick', (e) => { if (shareZoom > 1) shareResetZoom(); else shareZoomAt(e.clientX, e.clientY, 2.5); });
 
     // === FOLDER FILTER ===
     function filterByFolder(folderId) {

@@ -238,7 +238,10 @@
         <svg class="w-7 h-7 sm:w-9 sm:h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     </button>
     {{-- Image --}}
-    <img id="admin-lightbox-img" src="" alt="" class="max-w-[90vw] max-h-[85vh] sm:max-w-[85vw] sm:max-h-[80vh] object-contain rounded-lg select-none" draggable="false">
+    <div class="absolute inset-0 flex items-center justify-center overflow-hidden z-[1]" id="admin-lb-pan-container">
+        <img id="admin-lightbox-img" src="" alt="" class="max-w-[90vw] max-h-[85vh] sm:max-w-[85vw] sm:max-h-[80vh] object-contain rounded-lg select-none" draggable="false">
+    </div>
+    <div id="admin-lb-zoom-indicator" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full opacity-0 transition-opacity duration-300 pointer-events-none z-20 font-mono"></div>
     {{-- Next button (desktop + mobile: directly at edge) --}}
     <button class="absolute right-1 sm:right-3 top-1/2 -translate-y-1/2 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-colors z-20" onclick="adminLbNext()">
         <svg class="w-7 h-7 sm:w-9 sm:h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -468,6 +471,34 @@
     let lbTouchStartX = 0;
     let lbTouchStartY = 0;
 
+    // Zoom/Pan state
+    let adminZoom = 1, adminPanX = 0, adminPanY = 0;
+    let adminIsDragging = false, adminDragStartX = 0, adminDragStartY = 0, adminDragStartPanX = 0, adminDragStartPanY = 0;
+    let adminPinchStartDist = 0, adminPinchStartZoom = 1;
+    let adminZoomTimer = null;
+    const ADMIN_MIN_Z = 1, ADMIN_MAX_Z = 5, ADMIN_WHEEL_F = 1.15;
+
+    function adminApplyTransform() {
+        const img = document.getElementById('admin-lightbox-img');
+        if (img) img.style.transform = `translate(${adminPanX}px, ${adminPanY}px) scale(${adminZoom})`;
+    }
+    function adminResetZoom() { adminZoom = 1; adminPanX = 0; adminPanY = 0; adminApplyTransform(); }
+    function adminZoomAt(cx, cy, newZ) {
+        newZ = Math.min(ADMIN_MAX_Z, Math.max(ADMIN_MIN_Z, newZ));
+        if (newZ === adminZoom) return;
+        const img = document.getElementById('admin-lightbox-img');
+        if (!img) return;
+        const rect = img.getBoundingClientRect();
+        const icx = rect.left + rect.width / 2, icy = rect.top + rect.height / 2;
+        const dx = cx - icx, dy = cy - icy, s = newZ / adminZoom;
+        adminPanX = dx * (1 - s) + adminPanX * s;
+        adminPanY = dy * (1 - s) + adminPanY * s;
+        adminZoom = newZ;
+        adminApplyTransform();
+        const el = document.getElementById('admin-lb-zoom-indicator');
+        if (el) { el.textContent = Math.round(adminZoom * 100) + '%'; el.classList.remove('opacity-0'); clearTimeout(adminZoomTimer); adminZoomTimer = setTimeout(() => el.classList.add('opacity-0'), 1200); }
+    }
+
     function updateLightbox() {
         document.getElementById('admin-lightbox-img').src = ADMIN_PHOTOS[adminLightboxIndex].filename;
         const counter = document.getElementById('lb-counter');
@@ -479,14 +510,13 @@
         if (idx === -1) return;
         adminLightboxIndex = idx;
         updateLightbox();
+        adminResetZoom();
         const lb = document.getElementById('admin-lightbox');
         lb.classList.remove('hidden');
         lb.classList.add('flex');
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
-        // Push TWO history states so browser back/swipe lands on our duplicate
-        // instead of navigating away to the dashboard
         window.__lbHistoryPushed = true;
         history.pushState({ lightbox: true }, '');
         history.pushState({ lightbox: true }, '');
@@ -531,24 +561,56 @@
         updateLightbox();
     }
 
-    // Touch swipe for mobile — block browser back-swipe
-    const lbEl = document.getElementById('admin-lightbox');
-    lbEl?.addEventListener('touchstart', (e) => {
-        lbTouchStartX = e.touches[0].clientX;
-        lbTouchStartY = e.touches[0].clientY;
-    }, { passive: true });
-    lbEl?.addEventListener('touchmove', (e) => {
-        // Block ALL touchmove on lightbox to prevent iOS/Android back-swipe gesture
-        e.preventDefault();
-    }, { passive: false });
-    lbEl?.addEventListener('touchend', (e) => {
-        const dx = e.changedTouches[0].clientX - lbTouchStartX;
-        const dy = e.changedTouches[0].clientY - lbTouchStartY;
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-            if (dx < 0) adminLbNext();
-            else adminLbPrev();
+    // Touch swipe for mobile — block browser back-swipe + pinch-to-zoom
+    const adminPanContainer = document.getElementById('admin-lb-pan-container');
+    adminPanContainer?.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            adminIsDragging = true;
+            adminDragStartX = e.touches[0].clientX;
+            adminDragStartY = e.touches[0].clientY;
+            adminDragStartPanX = adminPanX;
+            adminDragStartPanY = adminPanY;
+            lbTouchStartX = e.touches[0].clientX;
+            lbTouchStartY = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+            adminIsDragging = false;
+            adminPinchStartDist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+            adminPinchStartZoom = adminZoom;
         }
     }, { passive: true });
+    adminPanContainer?.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && adminIsDragging && adminZoom > 1) {
+            e.preventDefault();
+            adminPanX = adminDragStartPanX + (e.touches[0].clientX - adminDragStartX);
+            adminPanY = adminDragStartPanY + (e.touches[0].clientY - adminDragStartY);
+            adminApplyTransform();
+        } else if (e.touches.length === 2) {
+            e.preventDefault();
+            const dist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+            if (adminPinchStartDist > 0) {
+                const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                adminZoomAt(cx, cy, Math.min(ADMIN_MAX_Z, Math.max(ADMIN_MIN_Z, adminPinchStartZoom * (dist / adminPinchStartDist))));
+            }
+        }
+    }, { passive: false });
+    adminPanContainer?.addEventListener('touchend', (e) => {
+        if (adminIsDragging && e.touches.length === 0) adminIsDragging = false;
+        if (adminZoom <= 1 && e.changedTouches.length === 1) {
+            const dx = e.changedTouches[0].clientX - lbTouchStartX;
+            const dy = e.changedTouches[0].clientY - lbTouchStartY;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                if (dx < 0) adminLbNext(); else adminLbPrev();
+            }
+        }
+    }, { passive: true });
+
+    // Mouse wheel zoom + drag
+    adminPanContainer?.addEventListener('wheel', (e) => { e.preventDefault(); adminZoomAt(e.clientX, e.clientY, adminZoom * (e.deltaY < 0 ? ADMIN_WHEEL_F : 1 / ADMIN_WHEEL_F)); }, { passive: false });
+    adminPanContainer?.addEventListener('mousedown', (e) => { if (e.button !== 0) return; adminIsDragging = true; adminDragStartX = e.clientX; adminDragStartY = e.clientY; adminDragStartPanX = adminPanX; adminDragStartPanY = adminPanY; adminPanContainer.style.cursor = 'grabbing'; });
+    document.addEventListener('mousemove', (e) => { if (!adminIsDragging) return; adminPanX = adminDragStartPanX + (e.clientX - adminDragStartX); adminPanY = adminDragStartPanY + (e.clientY - adminDragStartY); adminApplyTransform(); });
+    document.addEventListener('mouseup', () => { if (adminIsDragging) { adminIsDragging = false; adminPanContainer.style.cursor = adminZoom > 1 ? 'grab' : 'default'; } });
+    adminPanContainer?.addEventListener('dblclick', (e) => { if (adminZoom > 1) adminResetZoom(); else adminZoomAt(e.clientX, e.clientY, 2.5); });
 
     // === BULK DELETE ===
     function updateBulkBar() {
