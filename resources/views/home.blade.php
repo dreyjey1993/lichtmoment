@@ -61,3 +61,100 @@
     </div>
 </section>
 @endsection
+
+@push('scripts')
+<script>
+    // === PORTFOLIO LIGHTBOX ===
+    const PORTFOLIO_PHOTOS = @json($portfolioPhotos->map(fn($p) => [
+        'src' => str_starts_with($p->filename, 'portfolio/') ? '/storage/'.$p->filename : $p->filename,
+    ]));
+    let portfolioLbIndex = 0;
+    let portfolioTouchStartX = 0;
+    let portfolioTouchStartY = 0;
+
+    function openPortfolioLightbox(index) {
+        portfolioLbIndex = index;
+        updatePortfolioLightbox();
+        const lb = document.getElementById('portfolio-lightbox');
+        lb.classList.remove('hidden');
+        lb.classList.add('flex');
+        lb.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        window.__portfolioLbHistoryPushed = true;
+        history.pushState({ portfolioLb: true }, '');
+        history.pushState({ portfolioLb: true }, '');
+    }
+
+    function closePortfolioLightbox() {
+        const lb = document.getElementById('portfolio-lightbox');
+        lb.classList.add('hidden');
+        lb.classList.remove('flex');
+        lb.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        if (window.__portfolioLbHistoryPushed) {
+            window.__portfolioLbHistoryPushed = false;
+            history.go(-2);
+        }
+    }
+
+    function updatePortfolioLightbox() {
+        document.getElementById('portfolio-lb-img').src = PORTFOLIO_PHOTOS[portfolioLbIndex].src;
+        const counter = document.getElementById('portfolio-lb-counter');
+        if (counter) counter.textContent = (portfolioLbIndex + 1) + ' / ' + PORTFOLIO_PHOTOS.length;
+    }
+
+    function portfolioLbPrev() {
+        portfolioLbIndex = (portfolioLbIndex - 1 + PORTFOLIO_PHOTOS.length) % PORTFOLIO_PHOTOS.length;
+        updatePortfolioLightbox();
+    }
+
+    function portfolioLbNext() {
+        portfolioLbIndex = (portfolioLbIndex + 1) % PORTFOLIO_PHOTOS.length;
+        updatePortfolioLightbox();
+    }
+
+    // Browser back / swipe-back
+    window.addEventListener('popstate', function(e) {
+        const lb = document.getElementById('portfolio-lightbox');
+        if (lb && !lb.classList.contains('hidden') && window.__portfolioLbHistoryPushed) {
+            window.__portfolioLbHistoryPushed = false;
+            history.pushState({ portfolioLb: true }, '');
+            lb.classList.add('hidden');
+            lb.classList.remove('flex');
+            lb.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+        }
+    });
+
+    // Touch swipe
+    const portfolioLbEl = document.getElementById('portfolio-lightbox');
+    portfolioLbEl?.addEventListener('touchstart', (e) => {
+        portfolioTouchStartX = e.touches[0].clientX;
+        portfolioTouchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    portfolioLbEl?.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+    portfolioLbEl?.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - portfolioTouchStartX;
+        const dy = e.changedTouches[0].clientY - portfolioTouchStartY;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+            if (dx < 0) portfolioLbNext();
+            else portfolioLbPrev();
+        }
+    }, { passive: true });
+
+    // Keyboard
+    document.addEventListener('keydown', (e) => {
+        const lb = document.getElementById('portfolio-lightbox');
+        if (lb.classList.contains('hidden')) return;
+        if (e.key === 'Escape') closePortfolioLightbox();
+        if (e.key === 'ArrowLeft') portfolioLbPrev();
+        if (e.key === 'ArrowRight') portfolioLbNext();
+    });
+</script>
+@endpush
