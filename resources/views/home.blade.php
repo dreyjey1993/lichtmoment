@@ -3,9 +3,9 @@
 @section('title', 'Lichtmoment – Hochzeitsfotografie')
 
 @section('content')
+<canvas id="hero-canvas" class="fixed inset-0 w-full h-full" style="z-index: -1;"></canvas>
 <!-- Hero with Three.js -->
-<section class="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-offwhite to-cream">
-    <canvas id="hero-canvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden">
     <div class="relative z-10 text-center px-4 sm:px-6">
         <h1 class="font-serif text-3xl sm:text-6xl md:text-8xl font-light text-gold-400 tracking-[0.08em] mb-4" style="text-shadow: 0 2px 40px rgba(201,169,78,0.15)">
             Lichtmoment
