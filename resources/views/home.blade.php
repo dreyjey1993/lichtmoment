@@ -49,7 +49,7 @@
 @endif
 
 <!-- About / Photographer -->
-<section class="py-16 sm:py-24 px-4 sm:px-6 bg-white" id="about">
+<section class="py-16 sm:py-24 px-4 sm:px-6" id="about">
     <div class="max-w-2xl mx-auto text-center">
         <div class="w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-6 sm:mb-8 rounded-full bg-gradient-to-br from-gold-200 to-gold-400 p-1 shadow-lg shadow-gold-200/30">
             <div class="w-full h-full rounded-full bg-gradient-to-br from-cream to-gold-50 flex items-center justify-center">

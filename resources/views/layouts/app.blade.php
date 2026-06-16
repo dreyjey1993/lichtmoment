@@ -23,7 +23,7 @@
 
     @stack('head')
 </head>
-<body class="bg-offwhite text-gray-800 font-sans antialiased min-h-screen flex flex-col">
+<body class="text-gray-800 font-sans antialiased min-h-screen flex flex-col" style="background: transparent !important;">
 
     {{-- Navigation (for admin pages) --}}
     @if (isset($adminNav) && $adminNav)
@@ -50,7 +50,7 @@
 
     {{-- Footer --}}
     @if (!isset($noFooter) || !$noFooter)
-    <footer class="bg-cream border-t border-gray-100 py-10">
+    <footer class="border-t border-gray-100/30 py-10" style="background: color-mix(in oklch, var(--color-offwhite) 90%, transparent)">
         <div class="max-w-6xl mx-auto px-6 text-center">
             <p class="font-serif text-2xl text-gold-400 mb-4">Lichtmoment</p>
             <div class="flex justify-center gap-6 text-xs uppercase tracking-widest text-gray-400 mb-4">
