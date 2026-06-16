@@ -94,13 +94,13 @@
 
 {{-- Lightbox --}}
 <div id="lightbox" class="fixed inset-0 z-[9999] bg-black/95 hidden items-center justify-center p-6" aria-hidden="true">
-    <button class="absolute top-4 right-4 text-white text-4xl hover:text-gold-400 transition-colors" onclick="closeLightbox()">&times;</button>
-    <button class="absolute left-4 top-1/2 -translate-y-1/2 text-white text-3xl hover:text-gold-400 transition-colors hidden md:block" onclick="prevImage()">&#10094;</button>
+    <button class="absolute top-4 right-4 text-white text-4xl hover:text-gold-400 transition-colors z-[9999]" onclick="closeLightbox()">&times;</button>
+    <button class="absolute left-4 top-1/2 -translate-y-1/2 text-white text-3xl hover:text-gold-400 transition-colors hidden md:block z-[9999]" onclick="prevImage()">&#10094;</button>
     <div class="absolute inset-0 flex items-center justify-center overflow-hidden z-[1]" id="share-lb-pan-container">
         <img id="share-lb-img" src="" alt="" class="max-w-[90vw] max-h-[85vh] object-contain rounded-lg select-none" draggable="false">
     </div>
     <div id="share-lb-zoom-indicator" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full opacity-0 transition-opacity duration-300 pointer-events-none z-[9999] font-mono"></div>
-    <button class="absolute right-4 top-1/2 -translate-y-1/2 text-white text-3xl hover:text-gold-400 transition-colors hidden md:block" onclick="nextImage()">&#10095;</button>
+    <button class="absolute right-4 top-1/2 -translate-y-1/2 text-white text-3xl hover:text-gold-400 transition-colors hidden md:block z-[9999]" onclick="nextImage()">&#10095;</button>
 </div>
 @endsection
 
