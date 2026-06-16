@@ -228,9 +228,7 @@
     <div class="absolute inset-y-0 left-0 w-1/4 sm:hidden z-10" onclick="adminLbPrev()"></div>
     <div class="absolute inset-y-0 right-0 w-1/4 sm:hidden z-10" onclick="adminLbNext()"></div>
     {{-- Close button --}}
-    <button class="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors z-[9999]" onclick="closeAdminLightbox()">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
+    <button class="absolute top-3 right-3 sm:top-4 sm:right-4 text-white text-4xl hover:text-gold-400 transition-colors z-[9999]" onclick="closeAdminLightbox()">&times;</button>
     {{-- Counter --}}
     <div class="absolute top-3 left-3 sm:top-4 sm:left-4 text-white/50 text-xs font-mono z-[9999]" id="lb-counter"></div>
     {{-- Prev button (desktop + mobile: directly at edge) --}}
