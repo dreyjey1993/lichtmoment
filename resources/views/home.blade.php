@@ -274,7 +274,11 @@
         showZoomIndicator();
     });
 
-    // === MOBILE: Pinch-to-zoom + single-finger drag ===
+    // === MOBILE: Pinch-to-zoom + single-finger drag + swipe ===
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+
     panContainer?.addEventListener('touchstart', function(e) {
         if (e.touches.length === 1) {
             isDragging = true;
@@ -282,6 +286,9 @@
             dragStartClientY = e.touches[0].clientY;
             dragStartPanX = panX;
             dragStartPanY = panY;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchMoved = false;
         } else if (e.touches.length === 2) {
             isDragging = false;
             const t0 = e.touches[0], t1 = e.touches[1];
@@ -292,10 +299,16 @@
 
     panContainer?.addEventListener('touchmove', function(e) {
         if (e.touches.length === 1 && isDragging) {
-            e.preventDefault();
-            panX = dragStartPanX + (e.touches[0].clientX - dragStartClientX);
-            panY = dragStartPanY + (e.touches[0].clientY - dragStartClientY);
-            applyTransform();
+            const dx = Math.abs(e.touches[0].clientX - touchStartX);
+            const dy = Math.abs(e.touches[0].clientY - touchStartY);
+            if (dx > 5 || dy > 5) touchMoved = true;
+            // Only pan when zoomed in
+            if (zoom > 1) {
+                e.preventDefault();
+                panX = dragStartPanX + (e.touches[0].clientX - dragStartClientX);
+                panY = dragStartPanY + (e.touches[0].clientY - dragStartClientY);
+                applyTransform();
+            }
         } else if (e.touches.length === 2) {
             e.preventDefault();
             const t0 = e.touches[0], t1 = e.touches[1];
@@ -312,6 +325,15 @@
     panContainer?.addEventListener('touchend', function(e) {
         if (isDragging && e.touches.length === 0) {
             isDragging = false;
+            // Swipe to change image only when not zoomed and not dragging
+            if (zoom <= 1 && touchMoved && e.changedTouches.length === 1) {
+                const dx = e.changedTouches[0].clientX - touchStartX;
+                const dy = e.changedTouches[0].clientY - touchStartY;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                    if (dx < 0) portfolioLbNext();
+                    else portfolioLbPrev();
+                }
+            }
         }
     }, { passive: true });
 
