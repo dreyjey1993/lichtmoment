@@ -15,9 +15,11 @@
 
                 {{-- Project Title — click to edit --}}
                 <div class="group relative">
-                    <h1 class="font-serif text-2xl sm:text-3xl text-gray-700 cursor-pointer hover:text-gold-500 transition-colors pr-8"
-                        onclick="editTitle()" title="Klicken zum Bearbeiten">{{ $project->name }}</h1>
-                    <svg class="w-4 h-4 text-gray-300 absolute top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    <h1 class="font-serif text-2xl sm:text-3xl text-gray-700 pr-8"
+                        onclick="editTitle()">{{ $project->name }}</h1>
+                    <button onclick="editTitle()" class="absolute top-1/2 -translate-y-1/2 right-0 p-1.5 rounded-lg text-gray-300 hover:text-gold-400 hover:bg-gray-50 transition-all opacity-60 group-hover:opacity-100" title="Titel bearbeiten">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    </button>
                 </div>
                 <div id="title-edit" class="hidden mt-2">
                     <form action="{{ route('admin.project.update', $project->id) }}" method="POST" class="flex gap-2">
@@ -29,12 +31,15 @@
                 </div>
 
                 {{-- Description — click to edit --}}
-                <div class="mt-1">
+                <div class="mt-1 group/desc relative">
                     @if($project->description)
-                        <p class="text-gray-400 text-sm cursor-pointer hover:text-gray-500 transition-colors" onclick="editDescription()" title="Klicken zum Bearbeiten">{{ $project->description }}</p>
+                        <p class="text-gray-400 text-sm cursor-pointer hover:text-gray-500 transition-colors pr-6" onclick="editDescription()">{{ $project->description }}</p>
                     @else
-                        <p class="text-gray-300 text-sm italic cursor-pointer hover:text-gray-400 transition-colors" onclick="editDescription()" title="Klicken zum Bearbeiten">Keine Beschreibung — klicken zum Hinzufügen</p>
+                        <p class="text-gray-300 text-sm italic cursor-pointer hover:text-gray-400 transition-colors pr-6" onclick="editDescription()">Keine Beschreibung — klicken zum Hinzufügen</p>
                     @endif
+                    <button onclick="editDescription()" class="absolute top-0 right-0 p-1 rounded text-gray-300 hover:text-gold-400 transition-all opacity-60 group-hover/desc:opacity-100" title="Beschreibung bearbeiten">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    </button>
                     <div id="description-edit" class="hidden mt-2">
                         <form action="{{ route('admin.project.update', $project->id) }}" method="POST" class="flex gap-2">
                             @csrf
@@ -45,8 +50,8 @@
                     </div>
                 </div>
             </div>
-            <button onclick="deleteProject({{ $project->id }}, '{{ addslashes($project->name) }}')" class="btn btn-danger btn-md self-start">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <button onclick="deleteProject({{ $project->id }}, '{{ addslashes($project->name) }}')" class="self-start text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 Projekt löschen
             </button>
         </div>
