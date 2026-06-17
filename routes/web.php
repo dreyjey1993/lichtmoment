@@ -41,6 +41,7 @@ Route::middleware('admin.auth')->group(function () {
     Route::post('/admin/folder/create', [AdminController::class, 'createFolder'])->name('admin.folder.create');
     Route::post('/admin/share/create', [AdminController::class, 'createShareLink'])->name('admin.share.create');
     Route::post('/admin/project/{id}/settings', [AdminController::class, 'updateProjectSettings'])->name('admin.project.settings');
+    Route::post('/admin/project/{id}/update', [AdminController::class, 'updateProject'])->name('admin.project.update');
     Route::get('/admin/api/shares/{projectId}', [AdminController::class, 'getShareLinks'])->name('admin.api.shares');
     Route::post('/admin/api/delete', [AdminController::class, 'deleteItem'])->name('admin.api.delete');
     Route::post('/admin/api/bulk-delete-photos', [AdminController::class, 'bulkDeletePhotos'])->name('admin.api.bulk-delete-photos');

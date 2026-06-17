@@ -633,6 +633,7 @@ class LichtmomentTest extends TestCase
             'POST /admin/folder/create',
             'POST /admin/share/create',
             'POST /admin/project/1/settings',
+            'POST /admin/project/1/update',
             'POST /admin/api/delete',
             'GET /admin/api/shares/1',
         ];
@@ -648,5 +649,148 @@ class LichtmomentTest extends TestCase
                 "Route {$route} should redirect to login"
             );
         }
+    }
+
+    // ─── Cover Image Update ──────────────────────────────────────────
+
+    public function test_project_cover_image_update(): void
+    {
+        $user = User::where('email', 'admin@lichtmoment.de')->first();
+        $project = Project::first();
+
+        $fakeImage = \Illuminate\Http\Testing\File::fake()->create('cover.jpg', 100, 'image/jpeg');
+
+        $response = $this->actingAs($user, 'web')->post('/admin/project/' . $project->id . '/update', [
+            'cover_image' => $fakeImage,
+        ]);
+
+        $response->assertRedirect(route('admin.project.detail', $project->id));
+        $project->refresh();
+        $this->assertNotNull($project->cover_image);
+        $this->assertStringStartsWith('cover_', $project->cover_image);
+    }
+
+    public function test_project_cover_image_remove(): void
+    {
+        $user = User::where('email', 'admin@lichtmoment.de')->first();
+        $project = Project::first();
+
+        // Set a cover image first
+        $fakeImage = \Illuminate\Http\Testing\File::fake()->create('cover.jpg', 100, 'image/jpeg');
+        $this->actingAs($user, 'web')->post('/admin/project/' . $project->id . '/update', [
+            'cover_image' => $fakeImage,
+        ]);
+        $project->refresh();
+        $this->assertNotNull($project->cover_image);
+
+        // Now remove it
+        $response = $this->actingAs($user, 'web')->post('/admin/project/' . $project->id . '/update', [
+            'remove_cover' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.project.detail', $project->id));
+        $project->refresh();
+        $this->assertNull($project->cover_image);
+    }
+
+    public function test_project_update_requires_valid_cover_image(): void
+    {
+        $user = User::where('email', 'admin@lichtmoment.de')->first();
+        $project = Project::first();
+
+        $fakeFile = \Illuminate\Http\Testing\File::fake()->create('cover.pdf', 100);
+
+        $response = $this->actingAs($user, 'web')->post('/admin/project/' . $project->id . '/update', [
+            'cover_image' => $fakeFile,
+        ]);
+
+        $response->assertSessionHasErrors(['cover_image']);
+    }
+
+    // ─── Download Per Share Link ────────────────────────────────────
+
+    public function test_share_link_download_enabled(): void
+    {
+        $project = Project::first();
+        $share = ShareLink::create([
+            'project_id' => $project->id,
+            'token' => 'dltest12345678901',
+            'download_enabled' => true,
+        ]);
+
+        $response = $this->get('/share/' . $share->token);
+        $response->assertStatus(200);
+        $response->assertSee('Alle Fotos herunterladen');
+    }
+
+    public function test_share_link_download_disabled(): void
+    {
+        $project = Project::first();
+        $share = ShareLink::create([
+            'project_id' => $project->id,
+            'token' => 'ndltest1234567890',
+            'download_enabled' => false,
+        ]);
+
+        $response = $this->get('/share/' . $share->token);
+        $response->assertStatus(200);
+        $response->assertDontSee('Alle Fotos herunterladen');
+    }
+
+    public function test_share_download_zip_requires_download_enabled(): void
+    {
+        $project = Project::first();
+        $share = ShareLink::create([
+            'project_id' => $project->id,
+            'token' => 'nodltest12345678',
+            'download_enabled' => false,
+        ]);
+
+        $response = $this->postJson('/share/download/zip', [
+            'token' => $share->token,
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_share_download_photo_requires_download_enabled(): void
+    {
+        $project = Project::first();
+        $share = ShareLink::create([
+            'project_id' => $project->id,
+            'token' => 'nodltest22345678',
+            'download_enabled' => false,
+        ]);
+        $photo = Photo::where('project_id', $project->id)->first();
+        $this->assertNotNull($photo);
+
+        $response = $this->get('/share/download/photo/' . $photo->id . '?token=' . $share->token);
+        $response->assertStatus(403);
+    }
+
+    // ─── Dashboard Shows Cover Image ────────────────────────────────
+
+    public function test_dashboard_shows_cover_image_when_set(): void
+    {
+        $user = User::where('email', 'admin@lichtmoment.de')->first();
+        $project = Project::first();
+
+        $response = $this->actingAs($user, 'web')->get('/admin');
+        $response->assertStatus(200);
+        $response->assertSee($project->name);
+    }
+
+    public function test_dashboard_shows_initial_when_no_cover(): void
+    {
+        $user = User::where('email', 'admin@lichtmoment.de')->first();
+
+        // Create project without cover
+        $this->actingAs($user, 'web')->post('/admin/project/create', [
+            'name' => 'No Cover Project',
+        ]);
+
+        $response = $this->actingAs($user, 'web')->get('/admin');
+        $response->assertStatus(200);
+        $response->assertSee('No Cover Project');
     }
 }

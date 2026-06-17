@@ -173,6 +173,34 @@ class AdminController extends Controller
         ]);
     }
 
+    public function updateProject(Request $request, $id)
+    {
+        $project = Project::findOrFail($id);
+
+        if ($request->has('remove_cover')) {
+            if ($project->cover_image) {
+                Storage::disk('public')->delete('projects/' . $project->cover_image);
+                $project->cover_image = null;
+            }
+        } elseif ($request->hasFile('cover_image')) {
+            $request->validate([
+                'cover_image' => 'file|mimes:jpg,jpeg,webp,png|max:5120',
+            ]);
+            // Delete old cover
+            if ($project->cover_image) {
+                Storage::disk('public')->delete('projects/' . $project->cover_image);
+            }
+            $file = $request->file('cover_image');
+            $filename = 'cover_' . Str::random(16) . '.' . $file->extension();
+            $file->storeAs('projects', $filename, 'public');
+            $project->cover_image = $filename;
+        }
+
+        $project->save();
+
+        return redirect()->route('admin.project.detail', $project->id)->with('success', 'Projekt aktualisiert');
+    }
+
     public function updateProjectSettings(Request $request, $id)
     {
         $project = Project::findOrFail($id);

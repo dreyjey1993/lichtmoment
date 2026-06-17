@@ -23,16 +23,29 @@
 
         {{-- Settings Row --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div class="card p-5 flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-medium text-gray-700">Download erlaubt</h3>
-                    <p class="text-xs text-gray-400">Brautpaare können Fotos herunterladen</p>
+            <div class="card p-5">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Cover-Bild</h3>
+                <div class="flex items-center gap-4">
+                    @if($project->cover_image)
+                    <img src="/storage/projects/{{ $project->cover_image }}" alt="Cover" class="w-20 h-14 object-cover rounded-lg border border-gray-200">
+                    @else
+                    <div class="w-20 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-xs">Kein Cover</div>
+                    @endif>
+                    <div class="flex-1">
+                        <form action="{{ route('admin.project.update', $project->id) }}" method="POST" enctype="multipart/form-data" class="flex gap-2">
+                            @csrf
+                            <input type="file" name="cover_image" accept="image/jpeg,image/png,image/webp" class="text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gold-50 file:text-gold-600 hover:file:bg-gold-100 file:cursor-pointer">
+                            <button type="submit" class="btn btn-primary btn-sm">Ändern</button>
+                        </form>
+                        @if($project->cover_image)
+                        <form action="{{ route('admin.project.update', $project->id) }}" method="POST" class="mt-1">
+                            @csrf
+                            <input type="hidden" name="remove_cover" value="1">
+                            <button type="submit" class="text-xs text-red-400 hover:text-red-600">Entfernen</button>
+                        </form>
+                        @endif
+                    </div>
                 </div>
-                <label class="toggle">
-                    <input type="checkbox" id="toggle-download" {{ $project->download_enabled ? 'checked' : '' }}>
-                    <div class="toggle-track"></div>
-                    <div class="toggle-thumb"></div>
-                </label>
             </div>
             <div class="card p-5">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">Projekt-Passwort</h3>
@@ -387,13 +400,6 @@
     }
 
     // === SETTINGS ===
-    document.getElementById('toggle-download')?.addEventListener('change', function() {
-        const body = new URLSearchParams();
-        body.append('_token', CSRF_TOKEN);
-        body.append('download_enabled', this.checked ? 1 : 0);
-        fetch(`/admin/project/${PROJECT_ID}/settings`, { method: 'POST', body: body });
-        showToast('Einstellung aktualisiert');
-    });
 
     async function updatePassword() {
         const pwd = document.getElementById('project-password').value;
@@ -724,11 +730,29 @@
         const res = await fetch('/admin/api/delete', { method: 'POST', body: fd });
         const data = await res.json();
         if (data.success) {
-            const el = document.querySelector(`[data-id="${id}"]`);
+            const el = document.querySelector(`.share-card[data-id="${id}"]`);
             if (el) {
-                el.style.transition = 'opacity 0.3s';
+                el.style.transition = 'opacity 0.3s, max-height 0.3s';
                 el.style.opacity = '0';
-                setTimeout(() => el.remove(), 300);
+                el.style.maxHeight = '0';
+                el.style.overflow = 'hidden';
+                el.style.margin = '0';
+                el.style.padding = '0';
+                setTimeout(() => {
+                    el.remove();
+                    // Show empty state if no shares left
+                    const remaining = document.querySelectorAll('.share-card');
+                    if (remaining.length === 0) {
+                        const list = document.getElementById('share-list');
+                        if (list) {
+                            list.innerHTML = `
+                                <div class="text-center py-6">
+                                    <svg class="w-8 h-8 mx-auto text-gray-200 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                    <p class="text-xs text-gray-400">Noch keine Share-Links erstellt.</p>
+                                </div>`;
+                        }
+                    }
+                }, 300);
             }
             showToast('Share-Link gelöscht');
         } else {

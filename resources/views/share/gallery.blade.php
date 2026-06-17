@@ -69,8 +69,10 @@
                     <img src="/storage/projects/{{ $photo->filename }}" alt="{{ $photo->original_name }}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
                     @if($shareLink->download_enabled)
                     <a href="/share/download/photo/{{ $photo->id }}?token={{ $token }}"
-                       class="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                       onclick="event.stopPropagation()" title="Herunterladen">⬇</a>
+                       class="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:bg-white hover:text-gold-500 transition-colors shadow-sm"
+                       onclick="event.stopPropagation()" title="Herunterladen">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </a>
                     @endif
                 </div>
                 @endforeach
@@ -307,18 +309,33 @@
 
     // === DOWNLOAD ALL ===
     async function downloadAll() {
-        const res = await fetch('/share/download/zip', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ token: TOKEN }),
-        });
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'fotos.zip';
-        a.click();
-        URL.revokeObjectURL(url);
+        try {
+            const res = await fetch('/share/download/zip', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ token: TOKEN }),
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                showToast('Download fehlgeschlagen: ' + text, 'error');
+                return;
+            }
+            const blob = await res.blob();
+            if (blob.size === 0) {
+                showToast('Keine Fotos zum Herunterladen', 'error');
+                return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'fotos.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            showToast('Download fehlgeschlagen', 'error');
+        }
     }
 </script>
 @endpush
