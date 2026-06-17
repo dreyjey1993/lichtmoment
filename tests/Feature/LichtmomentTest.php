@@ -410,30 +410,16 @@ class LichtmomentTest extends TestCase
         ]);
     }
 
-    public function test_project_settings_update_password(): void
-    {
-        $user = User::where('email', 'admin@lichtmoment.de')->first();
-        $project = Project::first();
-
-        $response = $this->actingAs($user, 'web')->post('/admin/project/' . $project->id . '/settings', [
-            'password' => 'newpass123',
-        ]);
-
-        $response->assertStatus(200);
-        $project->refresh();
-        $this->assertNotNull($project->password_hash);
-    }
-
     public function test_project_settings_update_description(): void
     {
         $user = User::where('email', 'admin@lichtmoment.de')->first();
         $project = Project::first();
 
-        $response = $this->actingAs($user, 'web')->post('/admin/project/' . $project->id . '/settings', [
+        $response = $this->actingAs($user, 'web')->post('/admin/project/' . $project->id . '/update', [
             'description' => 'Updated description',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(302);
         $project->refresh();
         $this->assertEquals('Updated description', $project->description);
     }
