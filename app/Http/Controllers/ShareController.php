@@ -48,7 +48,7 @@ class ShareController extends Controller
             'email' => 'info@lichtmoment.de',
         ];
 
-        $hasPassword = !empty($shareLink->password_hash) || !empty($shareLink->project->password_hash);
+        $hasPassword = !empty($shareLink->password_hash);
         $needsPassword = $hasPassword && !session('share_access_' . $shareLink->token);
 
         return view('share.gallery', compact(
@@ -94,7 +94,7 @@ class ShareController extends Controller
             return response()->json(['error' => 'Ungültiger Link'], 404);
         }
 
-        $passwordToCheck = $shareLink->password_hash ?: $shareLink->project->password_hash;
+        $passwordToCheck = $shareLink->password_hash;
 
         if ($passwordToCheck && password_verify($request->password, $passwordToCheck)) {
             session(['share_access_' . $shareLink->token => true]);

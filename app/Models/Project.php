@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Project extends Model
 {
-    protected $fillable = ['name', 'description', 'slug', 'cover_image', 'download_enabled', 'password_hash'];
+    protected $fillable = ['name', 'description', 'slug', 'cover_image', 'download_enabled'];
 
     public function folders(): HasMany
     {

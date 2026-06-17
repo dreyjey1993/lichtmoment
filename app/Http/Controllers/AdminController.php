@@ -186,7 +186,6 @@ class AdminController extends Controller
             $request->validate([
                 'cover_image' => 'file|mimes:jpg,jpeg,webp,png|max:5120',
             ]);
-            // Delete old cover
             if ($project->cover_image) {
                 Storage::disk('public')->delete('projects/' . $project->cover_image);
             }
@@ -194,6 +193,10 @@ class AdminController extends Controller
             $filename = 'cover_' . Str::random(16) . '.' . $file->extension();
             $file->storeAs('projects', $filename, 'public');
             $project->cover_image = $filename;
+        }
+
+        if ($request->has('description')) {
+            $project->description = $request->input('description');
         }
 
         $project->save();
@@ -207,14 +210,6 @@ class AdminController extends Controller
 
         if ($request->has('download_enabled')) {
             $project->download_enabled = (bool)$request->download_enabled;
-        }
-
-        if ($request->has('password')) {
-            $project->password_hash = $request->password ? Hash::make($request->password) : null;
-        }
-
-        if ($request->has('description')) {
-            $project->description = $request->description;
         }
 
         $project->save();

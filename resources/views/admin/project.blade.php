@@ -13,7 +13,22 @@
             <div>
                 <a href="{{ route('admin.dashboard') }}" class="text-sm text-gray-400 hover:text-gold-400 transition-colors mb-2 inline-block">&larr; Zurück</a>
                 <h1 class="font-serif text-2xl sm:text-3xl text-gray-700">{{ $project->name }}</h1>
-                @if($project->description)<p class="text-gray-400 mt-1 text-sm">{{ $project->description }}</p>@endif
+                <div class="mt-1">
+                    @if($project->description)
+                        <p class="text-gray-400 text-sm cursor-pointer hover:text-gray-500" onclick="editDescription()" title="Klicken zum Bearbeiten">{{ $project->description }}</p>
+                    @else
+                        <p class="text-gray-300 text-sm italic cursor-pointer hover:text-gray-400" onclick="editDescription()" title="Klicken zum Bearbeiten">Keine Beschreibung — klicken zum Hinzufügen</p>
+                    @endif
+                </div>
+                {{-- Hidden edit form --}}
+                <div id="description-edit" class="hidden mt-2">
+                    <form action="{{ route('admin.project.update', $project->id) }}" method="POST" class="flex gap-2">
+                        @csrf
+                        <input type="text" name="description" value="{{ $project->description }}" placeholder="Projektbeschreibung..." class="input flex-1 text-sm">
+                        <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+                        <button type="button" onclick="cancelDescriptionEdit()" class="btn btn-ghost btn-sm">Abbrechen</button>
+                    </form>
+                </div>
             </div>
             <button onclick="deleteProject({{ $project->id }}, '{{ addslashes($project->name) }}')" class="btn btn-danger btn-md shrink-0 self-start">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -22,7 +37,7 @@
         </div>
 
         {{-- Settings Row --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div class="grid grid-cols-1 gap-4 mb-8">
             <div class="card p-5">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">Cover-Bild</h3>
                 <div class="flex items-center gap-4">
@@ -30,7 +45,7 @@
                     <img src="/storage/projects/{{ $project->cover_image }}" alt="Cover" class="w-20 h-14 object-cover rounded-lg border border-gray-200">
                     @else
                     <div class="w-20 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-xs">Kein Cover</div>
-                    @endif>
+                    @endif
                     <div class="flex-1">
                         <form action="{{ route('admin.project.update', $project->id) }}" method="POST" enctype="multipart/form-data" class="flex gap-2">
                             @csrf
@@ -45,13 +60,6 @@
                         </form>
                         @endif
                     </div>
-                </div>
-            </div>
-            <div class="card p-5">
-                <h3 class="text-sm font-medium text-gray-700 mb-2">Projekt-Passwort</h3>
-                <div class="flex gap-2">
-                    <input type="text" id="project-password" placeholder="Kein Passwort" class="input flex-1">
-                    <button onclick="updatePassword()" class="btn btn-primary btn-md">Setzen</button>
                 </div>
             </div>
         </div>
@@ -401,14 +409,12 @@
 
     // === SETTINGS ===
 
-    async function updatePassword() {
-        const pwd = document.getElementById('project-password').value;
-        if (!pwd) return showToast('Passwort eingeben', 'error');
-        const body = new URLSearchParams();
-        body.append('_token', CSRF_TOKEN);
-        body.append('password', pwd);
-        await fetch(`/admin/project/${PROJECT_ID}/settings`, { method: 'POST', body: body });
-        showToast('Passwort gesetzt');
+    function editDescription() {
+        document.getElementById('description-edit').classList.remove('hidden');
+    }
+
+    function cancelDescriptionEdit() {
+        document.getElementById('description-edit').classList.add('hidden');
     }
 
     // === SHARE LINKS ===
