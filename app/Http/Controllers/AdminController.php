@@ -195,6 +195,11 @@ class AdminController extends Controller
             $project->cover_image = $filename;
         }
 
+        if ($request->has('name')) {
+            $request->validate(['name' => 'required|string|max:255']);
+            $project->name = $request->input('name');
+        }
+
         if ($request->has('description')) {
             $project->description = $request->input('description');
         }
