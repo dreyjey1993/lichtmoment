@@ -32,6 +32,9 @@ RUN mkdir -p public/storage \
 RUN sed -i 's/^;listen = 127.0.0.1:9000/listen = 127.0.0.1:9000/' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's/^;listen.allowed_clients = 127.0.0.1/listen.allowed_clients = 127.0.0.1/' /usr/local/etc/php-fpm.d/www.conf
 
+# Remove trustProxies (causes TypeError with PHP 8.4 + Symfony IpUtils when behind reverse proxy)
+RUN sed -i "/trustProxies/d" /var/www/html/bootstrap/app.php
+
 # Configure Nginx
 RUN echo 'server { \
     listen 80; \
@@ -45,6 +48,9 @@ RUN echo 'server { \
         fastcgi_pass 127.0.0.1:9000; \
         fastcgi_index index.php; \
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; \
+        fastcgi_param REMOTE_ADDR $remote_addr; \
+        fastcgi_param X-Forwarded-For $proxy_add_x_forwarded_for; \
+        fastcgi_param X-Forwarded-Proto $scheme; \
         include fastcgi_params; \
     } \
 }' > /etc/nginx/http.d/default.conf
